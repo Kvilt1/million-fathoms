@@ -1,0 +1,1404 @@
+{
+ "rolls": 1000001,
+ "badges": [
+  {
+   "name": "Hills",
+   "family": "Hills",
+   "count": 136425,
+   "hash": 3696726639
+  },
+  {
+   "name": "Three of a Kind",
+   "family": "Of A Kind",
+   "count": 138033,
+   "hash": 1354564305
+  },
+  {
+   "name": "Lucky Seven (Divisible)",
+   "family": null,
+   "count": 142857,
+   "hash": 1873486747
+  },
+  {
+   "name": "Heterogeneous",
+   "family": null,
+   "count": 168571,
+   "hash": 2470357926
+  },
+  {
+   "name": "Mini Scramble",
+   "family": "Progression",
+   "count": 172847,
+   "hash": 1510050987
+  },
+  {
+   "name": "Gap One",
+   "family": null,
+   "count": 188888,
+   "hash": 1866486482
+  },
+  {
+   "name": "Two Pair",
+   "family": "Pairs",
+   "count": 265518,
+   "hash": 1476562005
+  },
+  {
+   "name": "Dunes",
+   "family": "Hills",
+   "count": 274590,
+   "hash": 3040707567
+  },
+  {
+   "name": "Hopscotch",
+   "family": "Hopscotch",
+   "count": 320193,
+   "hash": 1669570471
+  },
+  {
+   "name": "Ghost",
+   "family": null,
+   "count": 323848,
+   "hash": 3875634495
+  },
+  {
+   "name": "Quartet",
+   "family": null,
+   "count": 344736,
+   "hash": 3939227329
+  },
+  {
+   "name": "Hydrogen (1)",
+   "family": null,
+   "count": 354295,
+   "hash": 1740925002
+  },
+  {
+   "name": "Helium (2)",
+   "family": null,
+   "count": 354294,
+   "hash": 2893164888
+  },
+  {
+   "name": "Lithium (3)",
+   "family": null,
+   "count": 354294,
+   "hash": 3108955598
+  },
+  {
+   "name": "Beryllium (4)",
+   "family": null,
+   "count": 354294,
+   "hash": 1270732249
+  },
+  {
+   "name": "Boron (5)",
+   "family": null,
+   "count": 354294,
+   "hash": 418464065
+  },
+  {
+   "name": "Carbon (6)",
+   "family": null,
+   "count": 354294,
+   "hash": 4238294951
+  },
+  {
+   "name": "Nitrogen (7)",
+   "family": null,
+   "count": 354294,
+   "hash": 1276740947
+  },
+  {
+   "name": "Oxygen (8)",
+   "family": null,
+   "count": 354294,
+   "hash": 3346910126
+  },
+  {
+   "name": "Fluorine (9)",
+   "family": null,
+   "count": 354294,
+   "hash": 1733506102
+  },
+  {
+   "name": "Grounded",
+   "family": null,
+   "count": 399996,
+   "hash": 1757914226
+  },
+  {
+   "name": "Contiguous Pair",
+   "family": "Pairs",
+   "count": 402130,
+   "hash": 3574104334
+  },
+  {
+   "name": "Lucky Seven",
+   "family": null,
+   "count": 468559,
+   "hash": 742289398
+  },
+  {
+   "name": "Even",
+   "family": null,
+   "count": 500001,
+   "hash": 1996894184
+  },
+  {
+   "name": "Odd",
+   "family": null,
+   "count": 500000,
+   "hash": 692641669
+  },
+  {
+   "name": "Liftoff",
+   "family": null,
+   "count": 499996,
+   "hash": 2341937134
+  },
+  {
+   "name": "Void",
+   "family": null,
+   "count": 597870,
+   "hash": 1710168739
+  },
+  {
+   "name": "Neighbors",
+   "family": null,
+   "count": 620689,
+   "hash": 1876110481
+  },
+  {
+   "name": "Pair",
+   "family": "Pairs",
+   "count": 831430,
+   "hash": 3983906635
+  },
+  {
+   "name": "Six Digits",
+   "family": null,
+   "count": 900000,
+   "hash": 646509957
+  },
+  {
+   "name": "Four of a Kind",
+   "family": "Of A Kind",
+   "count": 11854,
+   "hash": 1647583902
+  },
+  {
+   "name": "Equation",
+   "family": null,
+   "count": 12954,
+   "hash": 4097002295
+  },
+  {
+   "name": "Low Ball",
+   "family": null,
+   "count": 15626,
+   "hash": 725092464
+  },
+  {
+   "name": "Mountain",
+   "family": "Peak",
+   "count": 16992,
+   "hash": 2045281485
+  },
+  {
+   "name": "Double Hop",
+   "family": "Hopscotch",
+   "count": 18793,
+   "hash": 305677635
+  },
+  {
+   "name": "High Roller",
+   "family": null,
+   "count": 19530,
+   "hash": 2870863949
+  },
+  {
+   "name": "Valley",
+   "family": "Peak",
+   "count": 23817,
+   "hash": 2688808713
+  },
+  {
+   "name": "Contiguous Two Pair",
+   "family": "Pairs",
+   "count": 25272,
+   "hash": 123850856
+  },
+  {
+   "name": "Mini Echo",
+   "family": "Repeat",
+   "count": 27001,
+   "hash": 736060213
+  },
+  {
+   "name": "Alternator",
+   "family": null,
+   "count": 35145,
+   "hash": 3237255750
+  },
+  {
+   "name": "Flush",
+   "family": null,
+   "count": 35155,
+   "hash": 1134388479
+  },
+  {
+   "name": "Contiguous Trips",
+   "family": "Contiguous Run",
+   "count": 35920,
+   "hash": 4102056041
+  },
+  {
+   "name": "Deep Void",
+   "family": "Void Depth",
+   "count": 35920,
+   "hash": 3784983544
+  },
+  {
+   "name": "Feather",
+   "family": null,
+   "count": 37501,
+   "hash": 2851150488
+  },
+  {
+   "name": "Blackjack",
+   "family": null,
+   "count": 39662,
+   "hash": 2521345515
+  },
+  {
+   "name": "Full House",
+   "family": "Boat",
+   "count": 41715,
+   "hash": 4094581898
+  },
+  {
+   "name": "Pocket Mirror",
+   "family": "Palindrome",
+   "count": 47089,
+   "hash": 3411800809
+  },
+  {
+   "name": "Snake Eyes",
+   "family": null,
+   "count": 47139,
+   "hash": 3548508317
+  },
+  {
+   "name": "Nice",
+   "family": "Nice",
+   "count": 49401,
+   "hash": 1153323009
+  },
+  {
+   "name": "Meaning of Life",
+   "family": "Botanist",
+   "count": 49401,
+   "hash": 2756564787
+  },
+  {
+   "name": "Six-Seven",
+   "family": "Sixty Seven",
+   "count": 49401,
+   "hash": 1718183375
+  },
+  {
+   "name": "Eighty-Six",
+   "family": "Eighty Six",
+   "count": 49401,
+   "hash": 2674294254
+  },
+  {
+   "name": "Balanced",
+   "family": null,
+   "count": 51036,
+   "hash": 3842920952
+  },
+  {
+   "name": "Rhyme",
+   "family": "Repeat",
+   "count": 53407,
+   "hash": 1597438883
+  },
+  {
+   "name": "Sequence (3)",
+   "family": "Progression",
+   "count": 58287,
+   "hash": 1774856630
+  },
+  {
+   "name": "2 Consecutive Numbers (Contains)",
+   "family": "Consecutive",
+   "count": 60270,
+   "hash": 1318617803
+  },
+  {
+   "name": "2 Consecutive Numbers (Nearby)",
+   "family": "Consecutive",
+   "count": 63491,
+   "hash": 1359381160
+  },
+  {
+   "name": "Mesa",
+   "family": "Peak",
+   "count": 63762,
+   "hash": 259531771
+  },
+  {
+   "name": "Prime Number",
+   "family": null,
+   "count": 78498,
+   "hash": 1940866276
+  },
+  {
+   "name": "Trinity",
+   "family": null,
+   "count": 79056,
+   "hash": 396696492
+  },
+  {
+   "name": "Dozen",
+   "family": null,
+   "count": 83333,
+   "hash": 2449802080
+  },
+  {
+   "name": "Canyon",
+   "family": "Peak",
+   "count": 84432,
+   "hash": 3700158894
+  },
+  {
+   "name": "Five Digits",
+   "family": null,
+   "count": 90000,
+   "hash": 835526053
+  },
+  {
+   "name": "Eleven",
+   "family": null,
+   "count": 90909,
+   "hash": 3850882074
+  },
+  {
+   "name": "Harshad Number",
+   "family": null,
+   "count": 95428,
+   "hash": 1470315013
+  },
+  {
+   "name": "Clean",
+   "family": "Void Depth",
+   "count": 100001,
+   "hash": 1577385400
+  },
+  {
+   "name": "Semi-Clean",
+   "family": null,
+   "count": 100000,
+   "hash": 3825864077
+  },
+  {
+   "name": "Equilibrium",
+   "family": "Equilibrium",
+   "count": 99999,
+   "hash": 3466105169
+  },
+  {
+   "name": "Sandwich",
+   "family": "Equilibrium",
+   "count": 99954,
+   "hash": 152655892
+  },
+  {
+   "name": "2nd Power",
+   "family": "Power",
+   "count": 1001,
+   "hash": 232781717
+  },
+  {
+   "name": "Even Spacing (Absolute)",
+   "family": "Progression",
+   "count": 1099,
+   "hash": 1596495506
+  },
+  {
+   "name": "Firefly",
+   "family": "Duality",
+   "count": 1216,
+   "hash": 1383252662
+  },
+  {
+   "name": "2 Consecutive Numbers",
+   "family": "Consecutive",
+   "count": 1980,
+   "hash": 2097520075
+  },
+  {
+   "name": "Palindrome",
+   "family": "Palindrome",
+   "count": 1999,
+   "hash": 2635542136
+  },
+  {
+   "name": "Contiguous Quads",
+   "family": "Contiguous Run",
+   "count": 2701,
+   "hash": 349553879
+  },
+  {
+   "name": "Deep Void (3)",
+   "family": "Void Depth",
+   "count": 2701,
+   "hash": 189826377
+  },
+  {
+   "name": "Turtle",
+   "family": "Progression",
+   "count": 2774,
+   "hash": 873458992
+  },
+  {
+   "name": "Secret Agent",
+   "family": null,
+   "count": 2889,
+   "hash": 1440446048
+  },
+  {
+   "name": "Heavy",
+   "family": null,
+   "count": 3003,
+   "hash": 3191471199
+  },
+  {
+   "name": "Contiguous Full House",
+   "family": "Boat",
+   "count": 3321,
+   "hash": 2826592540
+  },
+  {
+   "name": "Jackpot",
+   "family": "Jackpot",
+   "count": 3700,
+   "hash": 218145680
+  },
+  {
+   "name": "Devil",
+   "family": "Devil",
+   "count": 3700,
+   "hash": 3769296098
+  },
+  {
+   "name": "Sequence (4)",
+   "family": "Progression",
+   "count": 3860,
+   "hash": 3419524531
+  },
+  {
+   "name": "Error 404",
+   "family": "Error",
+   "count": 3979,
+   "hash": 297153071
+  },
+  {
+   "name": "Orientation",
+   "family": "Orientation",
+   "count": 3979,
+   "hash": 3794742392
+  },
+  {
+   "name": "Botanist",
+   "family": "Botanist",
+   "count": 3999,
+   "hash": 2623274080
+  },
+  {
+   "name": "Emergency",
+   "family": "Emergency",
+   "count": 3999,
+   "hash": 733057830
+  },
+  {
+   "name": "Pi Slice (3)",
+   "family": "Pi",
+   "count": 3999,
+   "hash": 3360108729
+  },
+  {
+   "name": "E Slice (3)",
+   "family": "E",
+   "count": 3999,
+   "hash": 3556530191
+  },
+  {
+   "name": "Calendar",
+   "family": "Calendar",
+   "count": 3999,
+   "hash": 2100223892
+  },
+  {
+   "name": "Divisible by Three",
+   "family": null,
+   "count": 4096,
+   "hash": 3342783362
+  },
+  {
+   "name": "Scramble",
+   "family": "Progression",
+   "count": 4401,
+   "hash": 339104685
+  },
+  {
+   "name": "Duality",
+   "family": "Duality",
+   "count": 4618,
+   "hash": 1929339162
+  },
+  {
+   "name": "Steps",
+   "family": "Monotonic",
+   "count": 4950,
+   "hash": 1735083565
+  },
+  {
+   "name": "Metronome",
+   "family": "Progression",
+   "count": 5623,
+   "hash": 1154005777
+  },
+  {
+   "name": "Framed Double",
+   "family": "Pairs",
+   "count": 6561,
+   "hash": 1761046989
+  },
+  {
+   "name": "Slopes",
+   "family": "Monotonic",
+   "count": 7948,
+   "hash": 2321877064
+  },
+  {
+   "name": "Paired Bookends",
+   "family": "Bookends",
+   "count": 8991,
+   "hash": 2201126358
+  },
+  {
+   "name": "Four Digits",
+   "family": null,
+   "count": 9000,
+   "hash": 836334517
+  },
+  {
+   "name": "Three Pair",
+   "family": "Pairs",
+   "count": 9720,
+   "hash": 2377028618
+  },
+  {
+   "name": "Bookends",
+   "family": "Bookends",
+   "count": 9990,
+   "hash": 137565953
+  },
+  {
+   "name": "Mirror Bookends",
+   "family": "Bookends",
+   "count": 9990,
+   "hash": 1247726818
+  },
+  {
+   "name": "Century",
+   "family": "Void Depth",
+   "count": 10000,
+   "hash": 807025468
+  },
+  {
+   "name": "Double Nine",
+   "family": "Nine Ending",
+   "count": 10000,
+   "hash": 1993728084
+  },
+  {
+   "name": "Quarter-Century",
+   "family": null,
+   "count": 10000,
+   "hash": 652881289
+  },
+  {
+   "name": "Semi-Century",
+   "family": "Void Depth",
+   "count": 10000,
+   "hash": 1931765100
+  },
+  {
+   "name": "Three-Quarter Century",
+   "family": null,
+   "count": 10000,
+   "hash": 3698731232
+  },
+  {
+   "name": "3rd Power",
+   "family": "Power",
+   "count": 101,
+   "hash": 2396383129
+  },
+  {
+   "name": "Even Spacing",
+   "family": "Progression",
+   "count": 116,
+   "hash": 1724006507
+  },
+  {
+   "name": "3 Consecutive Numbers",
+   "family": "Consecutive",
+   "count": 180,
+   "hash": 2990211488
+  },
+  {
+   "name": "Contiguous Fives",
+   "family": "Contiguous Run",
+   "count": 181,
+   "hash": 3978411952
+  },
+  {
+   "name": "Deep Void (4)",
+   "family": "Void Depth",
+   "count": 181,
+   "hash": 1175409146
+  },
+  {
+   "name": "Strobogrammatic",
+   "family": null,
+   "count": 199,
+   "hash": 1110740011
+  },
+  {
+   "name": "Straight",
+   "family": "Straight",
+   "count": 220,
+   "hash": 3904536640
+  },
+  {
+   "name": "Jackpot Four",
+   "family": "Jackpot",
+   "count": 280,
+   "hash": 1041104335
+  },
+  {
+   "name": "Very Nice",
+   "family": "Nice",
+   "count": 299,
+   "hash": 578390017
+  },
+  {
+   "name": "Deeper Meaning",
+   "family": "Meaning",
+   "count": 299,
+   "hash": 1349621152
+  },
+  {
+   "name": "6767",
+   "family": "Sixty Seven",
+   "count": 299,
+   "hash": 2427471122
+  },
+  {
+   "name": "Leet",
+   "family": "Leet",
+   "count": 300,
+   "hash": 2484253067
+  },
+  {
+   "name": "Hell",
+   "family": "Hell",
+   "count": 300,
+   "hash": 664246974
+  },
+  {
+   "name": "8008",
+   "family": "Boob",
+   "count": 300,
+   "hash": 3118764068
+  },
+  {
+   "name": "Big Brother",
+   "family": "Big Brother",
+   "count": 300,
+   "hash": 1214362804
+  },
+  {
+   "name": "Pi Slice (4)",
+   "family": "Pi",
+   "count": 300,
+   "hash": 249645418
+  },
+  {
+   "name": "E Slice (4)",
+   "family": "E",
+   "count": 300,
+   "hash": 2599458473
+  },
+  {
+   "name": "Tau Slice (4)",
+   "family": "Tau",
+   "count": 300,
+   "hash": 820160976
+  },
+  {
+   "name": "3 Consecutive Numbers (Scrambled)",
+   "family": "Consecutive",
+   "count": 360,
+   "hash": 3666745095
+  },
+  {
+   "name": "Zipper",
+   "family": null,
+   "count": 405,
+   "hash": 1639454797
+  },
+  {
+   "name": "Ascension",
+   "family": "Monotonic",
+   "count": 456,
+   "hash": 2247834490
+  },
+  {
+   "name": "Crescendo",
+   "family": "Progression",
+   "count": 480,
+   "hash": 1541843994
+  },
+  {
+   "name": "Five of a Kind",
+   "family": "Of A Kind",
+   "count": 505,
+   "hash": 3229747717
+  },
+  {
+   "name": "3 Consecutive Numbers (Contains)",
+   "family": "Consecutive",
+   "count": 633,
+   "hash": 2291061161
+  },
+  {
+   "name": "Contiguous Three Pair",
+   "family": "Pairs",
+   "count": 648,
+   "hash": 590087072
+  },
+  {
+   "name": "Framed Pair",
+   "family": "Pairs",
+   "count": 729,
+   "hash": 2443461323
+  },
+  {
+   "name": "Framed Triple",
+   "family": "Of A Kind",
+   "count": 729,
+   "hash": 3530446436
+  },
+  {
+   "name": "Framed Quad",
+   "family": "Of A Kind",
+   "count": 729,
+   "hash": 3043137445
+  },
+  {
+   "name": "Decay",
+   "family": "Monotonic",
+   "count": 837,
+   "hash": 1875570920
+  },
+  {
+   "name": "Three Digits",
+   "family": null,
+   "count": 900,
+   "hash": 1850607861
+  },
+  {
+   "name": "Echo",
+   "family": null,
+   "count": 999,
+   "hash": 1967534800
+  },
+  {
+   "name": "Millennium",
+   "family": "Void Depth",
+   "count": 1000,
+   "hash": 1341397423
+  },
+  {
+   "name": "Pronic Number",
+   "family": null,
+   "count": 1000,
+   "hash": 1038885689
+  },
+  {
+   "name": "Triple Nine",
+   "family": "Nine Ending",
+   "count": 1000,
+   "hash": 301120170
+  },
+  {
+   "name": "Semi-Millennium",
+   "family": "Void Depth",
+   "count": 1000,
+   "hash": 2277255380
+  },
+  {
+   "name": "Colossal",
+   "family": null,
+   "count": 1000,
+   "hash": 980931193
+  },
+  {
+   "name": "6th Power",
+   "family": "Power",
+   "count": 11,
+   "hash": 1821914295
+  },
+  {
+   "name": "Power of Three",
+   "family": null,
+   "count": 13,
+   "hash": 1169430377
+  },
+  {
+   "name": "5th Power",
+   "family": "Power",
+   "count": 16,
+   "hash": 1003519913
+  },
+  {
+   "name": "Jackpot Five",
+   "family": "Jackpot",
+   "count": 19,
+   "hash": 1662907318
+  },
+  {
+   "name": "Power of Two",
+   "family": null,
+   "count": 20,
+   "hash": 513906796
+  },
+  {
+   "name": "Royal Flush",
+   "family": "Straight",
+   "count": 20,
+   "hash": 2533202121
+  },
+  {
+   "name": "58008",
+   "family": "Boob",
+   "count": 20,
+   "hash": 595344869
+  },
+  {
+   "name": "80085",
+   "family": "Boob",
+   "count": 20,
+   "hash": 3738727896
+  },
+  {
+   "name": "Pi Slice (5)",
+   "family": "Pi",
+   "count": 20,
+   "hash": 2350947028
+  },
+  {
+   "name": "E Slice (5)",
+   "family": "E",
+   "count": 20,
+   "hash": 2778534541
+  },
+  {
+   "name": "Tau Slice (5)",
+   "family": "Tau",
+   "count": 20,
+   "hash": 1472505948
+  },
+  {
+   "name": "Cascade",
+   "family": "Progression",
+   "count": 30,
+   "hash": 3248327801
+  },
+  {
+   "name": "Fibonacci Number",
+   "family": null,
+   "count": 30,
+   "hash": 4146510641
+  },
+  {
+   "name": "4th Power",
+   "family": "Power",
+   "count": 32,
+   "hash": 1322047472
+  },
+  {
+   "name": "Waterfall",
+   "family": "Progression",
+   "count": 35,
+   "hash": 3843652569
+  },
+  {
+   "name": "4 Consecutive Numbers (Contains)",
+   "family": "Consecutive",
+   "count": 38,
+   "hash": 64729486
+  },
+  {
+   "name": "4 Consecutive Numbers (Scrambled)",
+   "family": "Consecutive",
+   "count": 44,
+   "hash": 3677991953
+  },
+  {
+   "name": "Homogeneous",
+   "family": null,
+   "count": 45,
+   "hash": 703851836
+  },
+  {
+   "name": "Funny Numbers",
+   "family": "Ultimeme",
+   "count": 60,
+   "hash": 3498233533
+  },
+  {
+   "name": "Binary Soul",
+   "family": null,
+   "count": 65,
+   "hash": 2298315532
+  },
+  {
+   "name": "Straight Flush",
+   "family": "Straight",
+   "count": 69,
+   "hash": 4025493720
+  },
+  {
+   "name": "Two Digits",
+   "family": null,
+   "count": 90,
+   "hash": 1701556532
+  },
+  {
+   "name": "Spy Number",
+   "family": null,
+   "count": 97,
+   "hash": 1927986840
+  },
+  {
+   "name": "Epoch",
+   "family": "Void Depth",
+   "count": 100,
+   "hash": 2898607318
+  },
+  {
+   "name": "Quad Nine",
+   "family": "Nine Ending",
+   "count": 100,
+   "hash": 616467000
+  },
+  {
+   "name": "Semi-Epoch",
+   "family": "Void Depth",
+   "count": 100,
+   "hash": 1219234750
+  },
+  {
+   "name": "Exact Nice",
+   "family": "Nice",
+   "count": 1,
+   "hash": 2947085696
+  },
+  {
+   "name": "Exact Jackpot",
+   "family": "Jackpot",
+   "count": 1,
+   "hash": 964675693
+  },
+  {
+   "name": "Jackpot Six",
+   "family": "Jackpot",
+   "count": 1,
+   "hash": 3613336757
+  },
+  {
+   "name": "Exact Botanist",
+   "family": "Botanist",
+   "count": 1,
+   "hash": 3144064806
+  },
+  {
+   "name": "Exact Devil",
+   "family": "Devil",
+   "count": 1,
+   "hash": 3619830501
+  },
+  {
+   "name": "Exact Leet",
+   "family": "Leet",
+   "count": 1,
+   "hash": 3361957851
+  },
+  {
+   "name": "Exact Hell",
+   "family": "Hell",
+   "count": 1,
+   "hash": 606541885
+  },
+  {
+   "name": "Exact 80085",
+   "family": "Boob",
+   "count": 1,
+   "hash": 3997422785
+  },
+  {
+   "name": "Exact Meaning",
+   "family": "Botanist",
+   "count": 1,
+   "hash": 1926778335
+  },
+  {
+   "name": "Exact Emergency",
+   "family": "Emergency",
+   "count": 1,
+   "hash": 2272064671
+  },
+  {
+   "name": "Very Very Nice",
+   "family": "Nice",
+   "count": 1,
+   "hash": 2019056696
+  },
+  {
+   "name": "Hotbox",
+   "family": "Botanist",
+   "count": 1,
+   "hash": 1539676485
+  },
+  {
+   "name": "Mayday",
+   "family": "Emergency",
+   "count": 1,
+   "hash": 1205707505
+  },
+  {
+   "name": "Universal Answer",
+   "family": "Meaning",
+   "count": 1,
+   "hash": 2504170130
+  },
+  {
+   "name": "Orwellian",
+   "family": "Big Brother",
+   "count": 1,
+   "hash": 1914159432
+  },
+  {
+   "name": "Exact Six-Seven",
+   "family": "Sixty Seven",
+   "count": 1,
+   "hash": 2427613158
+  },
+  {
+   "name": "Exact Eighty-Six",
+   "family": "Eighty Six",
+   "count": 1,
+   "hash": 2733745091
+  },
+  {
+   "name": "Exact Orientation",
+   "family": "Orientation",
+   "count": 1,
+   "hash": 3039877024
+  },
+  {
+   "name": "Exact Calendar",
+   "family": "Calendar",
+   "count": 1,
+   "hash": 1970897779
+  },
+  {
+   "name": "Brainrot",
+   "family": "Sixty Seven",
+   "count": 1,
+   "hash": 374852501
+  },
+  {
+   "name": "Groundhog Day",
+   "family": "Calendar",
+   "count": 1,
+   "hash": 2415606748
+  },
+  {
+   "name": "One Million",
+   "family": null,
+   "count": 1,
+   "hash": 789475816
+  },
+  {
+   "name": "Not Found",
+   "family": "Error",
+   "count": 1,
+   "hash": 3097669142
+  },
+  {
+   "name": "Full Day",
+   "family": null,
+   "count": 1,
+   "hash": 3889418691
+  },
+  {
+   "name": "17776",
+   "family": null,
+   "count": 1,
+   "hash": 1420013774
+  },
+  {
+   "name": "Infernal",
+   "family": "Devil",
+   "count": 1,
+   "hash": 2269141873
+  },
+  {
+   "name": "Zero",
+   "family": "Single Digit",
+   "count": 1,
+   "hash": 1268118805
+  },
+  {
+   "name": "One",
+   "family": "Single Digit",
+   "count": 1,
+   "hash": 4218009092
+  },
+  {
+   "name": "Two",
+   "family": "Single Digit",
+   "count": 1,
+   "hash": 3958272823
+  },
+  {
+   "name": "Three",
+   "family": "Single Digit",
+   "count": 1,
+   "hash": 2613195814
+  },
+  {
+   "name": "Four",
+   "family": "Single Digit",
+   "count": 1,
+   "hash": 182778065
+  },
+  {
+   "name": "Five",
+   "family": "Single Digit",
+   "count": 1,
+   "hash": 3132668352
+  },
+  {
+   "name": "Six",
+   "family": "Single Digit",
+   "count": 1,
+   "hash": 2872932083
+  },
+  {
+   "name": "Seven",
+   "family": "Single Digit",
+   "count": 1,
+   "hash": 1527855074
+  },
+  {
+   "name": "Eight",
+   "family": "Single Digit",
+   "count": 1,
+   "hash": 3438800285
+  },
+  {
+   "name": "Nine",
+   "family": "Single Digit",
+   "count": 1,
+   "hash": 2093723276
+  },
+  {
+   "name": "Always",
+   "family": "Calendar",
+   "count": 2,
+   "hash": 2256662349
+  },
+  {
+   "name": "Funny Number",
+   "family": "Ultimeme",
+   "count": 2,
+   "hash": 799738604
+  },
+  {
+   "name": "Exact Boob",
+   "family": "Boob",
+   "count": 2,
+   "hash": 1363948246
+  },
+  {
+   "name": "13th Power",
+   "family": "Power",
+   "count": 3,
+   "hash": 2818873908
+  },
+  {
+   "name": "17th Power",
+   "family": "Power",
+   "count": 3,
+   "hash": 3504339046
+  },
+  {
+   "name": "19th Power",
+   "family": "Power",
+   "count": 3,
+   "hash": 3035551452
+  },
+  {
+   "name": "Tau",
+   "family": "Tau",
+   "count": 3,
+   "hash": 1313209871
+  },
+  {
+   "name": "Golden Ratio",
+   "family": null,
+   "count": 3,
+   "hash": 3512747089
+  },
+  {
+   "name": "10th Power",
+   "family": "Power",
+   "count": 4,
+   "hash": 3515251079
+  },
+  {
+   "name": "11th Power",
+   "family": "Power",
+   "count": 4,
+   "hash": 2897543488
+  },
+  {
+   "name": "Pi",
+   "family": "Pi",
+   "count": 4,
+   "hash": 2918821642
+  },
+  {
+   "name": "Euler's Number",
+   "family": "E",
+   "count": 4,
+   "hash": 4116311462
+  },
+  {
+   "name": "4 Consecutive Numbers",
+   "family": "Consecutive",
+   "count": 4,
+   "hash": 808266089
+  },
+  {
+   "name": "9th Power",
+   "family": "Power",
+   "count": 5,
+   "hash": 3553148569
+  },
+  {
+   "name": "8th Power",
+   "family": "Power",
+   "count": 6,
+   "hash": 4234402167
+  },
+  {
+   "name": "Ouroboros",
+   "family": "Power",
+   "count": 7,
+   "hash": 732407276
+  },
+  {
+   "name": "7th Power",
+   "family": "Power",
+   "count": 8,
+   "hash": 3701733812
+  },
+  {
+   "name": "Power of Seven",
+   "family": null,
+   "count": 7,
+   "hash": 2053354251
+  },
+  {
+   "name": "Factorial",
+   "family": null,
+   "count": 9,
+   "hash": 3874923738
+  },
+  {
+   "name": "Power of Five",
+   "family": null,
+   "count": 8,
+   "hash": 2763864052
+  },
+  {
+   "name": "Hello",
+   "family": null,
+   "count": 9,
+   "hash": 3465847721
+  },
+  {
+   "name": "Sequence (6)",
+   "family": "Progression",
+   "count": 9,
+   "hash": 3012034700
+  },
+  {
+   "name": "Eon",
+   "family": "Void Depth",
+   "count": 10,
+   "hash": 1643229697
+  },
+  {
+   "name": "Contiguous Sixes",
+   "family": "Contiguous Run",
+   "count": 10,
+   "hash": 570906827
+  },
+  {
+   "name": "Deep Void (5)",
+   "family": "Void Depth",
+   "count": 10,
+   "hash": 1643229697
+  },
+  {
+   "name": "Single Digit",
+   "family": "Single Digit",
+   "count": 10,
+   "hash": 975245012
+  },
+  {
+   "name": "Quint Nine",
+   "family": "Nine Ending",
+   "count": 10,
+   "hash": 1336755842
+  },
+  {
+   "name": "Semi-Eon",
+   "family": "Void Depth",
+   "count": 10,
+   "hash": 2900743395
+  }
+ ],
+ "scoreHash": 721635249
+}

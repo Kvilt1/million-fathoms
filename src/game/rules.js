@@ -347,4 +347,4 @@ function earnedBadges(n) {
   return out;
 }
 
-if (typeof module !== 'undefined') module.exports = { BADGES, context, earnedBadges, MAX_ROLL, ROLLS };
+export { BADGES, context, earnedBadges, MAX_ROLL, ROLLS };

@@ -1,0 +1,6 @@
+/* Latin subsets only, inlined into the single-file build as data URLs. */
+@font-face { font-family: 'Tilt Neon'; font-weight: 400; font-display: swap; src: url('../node_modules/@fontsource/tilt-neon/files/tilt-neon-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Bowlby One'; font-weight: 400; font-display: swap; src: url('../node_modules/@fontsource/bowlby-one/files/bowlby-one-latin-400-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 500; font-display: swap; src: url('../node_modules/@fontsource/baloo-2/files/baloo-2-latin-500-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 700; font-display: swap; src: url('../node_modules/@fontsource/baloo-2/files/baloo-2-latin-700-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Baloo 2'; font-weight: 800; font-display: swap; src: url('../node_modules/@fontsource/baloo-2/files/baloo-2-latin-800-normal.woff2') format('woff2'); }

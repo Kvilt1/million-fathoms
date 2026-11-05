@@ -1,7 +1,8 @@
 // Proves the JS rules equal the verified Python results, roll by roll, for every badge.
-const fs = require('fs'), path = require('path');
-const { BADGES, context, ROLLS } = require('./src/rules.js');
-const data = JSON.parse(fs.readFileSync('src/data.json', 'utf8'));
+// Needs the Python reference dumps (not included): node test_rules.js <dump dir>
+import fs from 'node:fs';
+import path from 'node:path';
+import { BADGES, context, ROLLS } from './src/game/rules.js';
 const dir = process.argv[2];
 const names = JSON.parse(fs.readFileSync(path.join(dir, 'order.json'), 'utf8'));
 const byName = new Map(BADGES.map(b => [b.name, b]));

@@ -3,3 +3,5 @@ node_modules/
 shots/
 dist/million-fathoms-page.html
 __pycache__/
+dist/*
+!dist/million-fathoms.html

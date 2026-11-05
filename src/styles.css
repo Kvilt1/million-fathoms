@@ -1,3 +1,6 @@
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
 /* Layout concept: a sounding console floating in a full-height water column.
    The water behind everything is the score: it darkens as the roll sinks. */
 :root {

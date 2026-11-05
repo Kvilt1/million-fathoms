@@ -16,7 +16,7 @@ prev=0
 for v,k in zip(u.tolist(),c.tolist()):
     buf+=varint(v-prev); buf+=varint(k); prev=v
 d={"eps":{b.name:int(e) for b,e in zip(BADGES,eps)},"counts":{b.name:int(k) for b,k in zip(BADGES,counts)},"dist":base64.b64encode(bytes(buf)).decode()}
-json.dump(d,open('src/data.json','w'),ensure_ascii=False,separators=(',',':'))
+json.dump(d,open('src/game/data.json','w'),ensure_ascii=False,separators=(',',':'))
 print("dist bytes",len(d['dist']))
 top=np.argsort(-totals,kind='stable')[:30].tolist()
 print(top[:12])
