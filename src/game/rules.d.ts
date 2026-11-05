@@ -4,7 +4,7 @@ export interface Ctx {
   vals: number[]; uniq: number; len: number; multi: number;
 }
 export interface BadgeDef {
-  name: string; icon: string; desc: string; family: string | null;
+  name: string; desc: string; family: string | null;
   rule: (n: number, s: string, x: Ctx) => boolean;
 }
 export const BADGES: BadgeDef[];

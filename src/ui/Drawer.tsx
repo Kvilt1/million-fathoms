@@ -53,8 +53,7 @@ function PaneLog() {
       <div className="mini"><b>{fmt(S.life)}</b><span>Lifetime EP</span></div>
       <div className="mini"><b>{fmt(S.life / S.rolls)}</b><span>Average EP</span></div>
       <div className="mini"><b>{fmt(top.n)}</b><span>Best roll, {fmt(top.total)} EP</span></div>
-      <div className="mini"><b>{rarest ? rarest.icon + ' ' + rarest.name : 'None'}</b><span>Rarest badge found</span></div>
-      <div className="mini"><b>{fmt(S.bestDive)}</b><span>Best 10-roll dive</span></div>
+      <div className="mini"><b>{rarest ? rarest.name : 'None'}</b><span>Rarest badge found</span></div>
     </div>
     <div className="tiersbars">
       {TIERS.map((t, i) => <div key={t.name} className="tb" style={cssVars({ '--c': t.color })}><b>{t.name}</b><div className="bar"><i style={{ width: `${100 * S.tiers[i] / max}%` }} /></div><span>{fmt(S.tiers[i])}</span></div>).reverse()}
@@ -93,7 +92,7 @@ function PaneCodex({ f, set }: { f: CodexF; set: (p: Partial<CodexF>) => void })
           const hits = S.badges[b.name] || 0, odds = ROLLS / b.count;
           return (
             <div key={b.name} className={`card ${hits ? '' : 'locked'}`} style={cssVars({ '--c': TIERS[b.tier + 1].color })}>
-              <Icon b={b} base={22} /><span className="nm">{b.name}</span><span className="ds">{b.desc}</span>
+              <Icon b={b} /><span className="nm">{b.name}</span><span className="ds">{b.desc}</span>
               <span className="ft"><span><b>{fmt(b.ep)}</b> EP</span><span>1 in {odds < 10 ? odds.toFixed(1) : fmt(odds)}</span><span>{hits ? fmt(hits) + '×' : 'Not found'}</span></span>
             </div>
           );

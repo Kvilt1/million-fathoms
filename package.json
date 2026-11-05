@@ -8,7 +8,8 @@
     "build": "tsc --noEmit && vite build",
     "test:rules": "tsx tests/rules_snapshot.ts",
     "test:ui": "node test_ui.js",
-    "test:highlights": "tsx tests/highlights_test.ts"
+    "test:highlights": "tsx tests/highlights_test.ts",
+    "test:glyphs": "tsx tests/glyphs_test.ts"
   },
   "dependencies": {
     "react": "^19.3.1",

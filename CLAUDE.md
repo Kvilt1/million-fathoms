@@ -15,6 +15,7 @@ npm run dev                       # Vite dev server (entry: million-fathoms.html
 npm run build                     # tsc --noEmit, then vite build -> dist/million-fathoms.html
 npm run test:rules                # every rule and every roll's score vs tests/baseline.json
 npm run test:highlights           # digit highlights on samples and on all 1,000,001 rolls
+npm run test:glyphs               # every badge maps to a valid 8x8 pixel glyph
 SHOTS=shots npm run test:ui       # Playwright playthrough of the BUILT file (build first)
 ```
 
@@ -29,13 +30,14 @@ SHOTS=shots npm run test:ui       # Playwright playthrough of the BUILT file (bu
 **Scoring is frozen.** `src/game/rules.js` (the 233 badge rules, in plain JS with types in `rules.d.ts`) and the scoring in `src/game/score.ts` were checked against the original game on every roll. `tests/rules_snapshot.ts` compares FNV hashes of every rule's hits and every roll's total, tier, rank, depth and paid count against `tests/baseline.json`. Five protected scores must never change: 61287=4634, 142857=8131, 420420=100133055, 1000000=131081274, 403602=1759. Don't change rule logic, EP values (`data.json`), tier floors, or the depth anchors in `score.ts` unless the user explicitly asks to change scoring.
 
 - Scoring: within a badge `family`, only the highest-EP badge pays and the others are "outranked". The total EP sets the tier (Trash to Mythic, by `TIERS[].floor`). It also sets the zone `u`, which runs from 0 to 7 on a log scale between EP anchors, and the depth in fathoms. `data.json` holds the EP and count for each badge, plus a base64 varint-encoded distribution of every roll's total, which `rollsBelow()` uses for percentile rank. `export_data.py` generates it.
+- `src/game/glyphs.ts` holds the 8x8 pixel glyphs shown beside each badge (rendered as crisp SVG in the badge's tier colour) and `glyphId()`, which maps every badge to one by name, then by family. Badges have no emoji or icon field, and any new badge needs a match there (`test:glyphs` enforces it).
 - `src/game/highlights.ts` decides which reel digits light up for each badge during the reveal. It's separate from the rules on purpose, so highlights can't affect scoring. Every badge needs an entry in `HIGHLIGHTS`, and `test:highlights` enforces that.
 
 **State and rendering.** `src/game/controller.ts` is the game loop and holds all mutable state. React doesn't own the game state:
-- `S` is the saved state (`save.ts`, localStorage key `million-fathoms-v1`, kept compatible with the original save shape). `V` is the view model React renders. `G` holds runtime flags (busy, skip, auto, mode, dive).
+- `S` is the saved state (`save.ts`, localStorage key `million-fathoms-v1`, kept compatible with the original save shape). `V` is the view model React renders. `G` holds runtime flags (busy, skip, auto).
 - To change the UI, mutate `V`/`S`, then call `emit()`. Components subscribe through `useGame()` (`useSyncExternalStore` on a version counter).
 - The 60 fps parts skip React. The controller drives them imperatively: the canvas scene (`engine/scene.ts`), the particle canvas (`engine/fx.ts`), the reels (`engine/reels.ts`, which builds its own DOM inside a box React provides), and the EP counter (written straight to `#ep`). The controller also sets the CSS variable `--tier` and adds classes such as `shake` directly.
-- `start()` (called once from `App`) creates the engines. `play(n)` runs a roll: spin the reels, reveal badges one at a time (Show/Fast speeds), then record, celebrate and notify. Auto-roll and the 10-roll dive mode sit on top of `rollNext()`.
+- `start()` (called once from `App`) creates the engines. `play(n)` runs a roll: spin the reels, reveal badges one at a time (Show/Fast speeds), then record, celebrate and notify. Auto-roll sits on top of `rollNext()`.
 - `window.MF` exposes `play`, `scoreRoll`, `Sound`, `highlight`, `badgeMs`, `state` and `game`. `test_ui.js` depends on it, so keep it working.
 
 **Timing.** Every roll and reveal duration lives in `src/game/timing.ts`, keyed by speed (`show` / `fast` / `instant`) and tier. Tune timing there, and don't hard-code durations elsewhere. `test_ui.js` checks some reveal timing.

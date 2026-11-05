@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
-import { TIERS, compact, fmt, pctText } from '../game/score';
+import { compact, fmt, pctText } from '../game/score';
 import { setsComplete } from '../game/sets';
 import {
-  useGame, start, rollNext, setAuto, setSpeed, setAutoStop, setMode, openDrawer, toggleSound, Sound, G,
+  useGame, start, rollNext, setAuto, setSpeed, setAutoStop, openDrawer, toggleSound, Sound, G,
 } from '../game/controller';
 import type { Speed } from '../game/save';
 import { Row, Outranked, Ladder, Now } from './parts';
@@ -27,10 +27,6 @@ export function App() {
       <div className="app" id="app">
         <div className="top">
           <h1 className="brand" style={{ margin: 0 }}>Million Fathoms</h1>
-          <div className="modes" role="group" aria-label="Game mode">
-            <button id="modeFree" aria-pressed={V.mode === 'free'} onClick={ui(() => setMode('free'))}>Free dive</button>
-            <button id="modeDive" aria-pressed={V.mode === 'dive'} onClick={ui(() => setMode('dive'))}>10-roll dive</button>
-          </div>
           <div className="stats">
             <div className="stat" id="sRolls"><b>{fmt(S.rolls)}</b><span>Rolls</span></div>
             <div className="stat opt" id="sBest"><b>{compact(S.best ? S.best.total : 0)}</b><span>Best EP</span></div>
@@ -48,12 +44,6 @@ export function App() {
         </div>
 
         <section className="console" aria-label="Roll console">
-          <div className="run" id="run" hidden={V.mode !== 'dive'}>
-            <div className="pips" id="pips">
-              {Array.from({ length: 10 }, (_, i) => { const r = V.dive[i]; return <span key={i} className={`pip ${r ? 'on' : i === V.dive.length ? 'cur' : ''}`} style={{ color: r ? TIERS[r.tier].color : 'inherit' }} />; })}
-            </div>
-            <span>Dive total <b id="runTotal">{fmt(V.dive.reduce((a, r) => a + r.total, 0))}</b> EP</span>
-          </div>
           <div className="machine">
             <div className="reels" id="reels" ref={reels} aria-hidden="true" />
           </div>

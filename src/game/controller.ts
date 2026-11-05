@@ -1,9 +1,9 @@
-/* The game loop: rolls, reveal, saving, auto-roll and dives. React renders from `V` and `S` and
+/* The game loop: rolls, reveal, saving and auto-roll. React renders from `V` and `S` and
    re-renders whenever `emit()` runs; the 60 fps parts (reels, scene, particles, EP counter) are
    driven directly here. Moved from the original app.js with the same timings. */
 import { useSyncExternalStore } from 'react';
 import {
-  TIERS, BADGE_TIERS, BY_NAME, ROLLS, MAX_ROLL, fmt, clamp, zoneOf, fathoms, tierOf, rollsBelow, scoreRoll, randomRoll, badgeColor,
+  TIERS, BADGE_TIERS, BY_NAME, ROLLS, MAX_ROLL, fmt, clamp, zoneOf, tierOf, rollsBelow, scoreRoll, randomRoll, badgeColor,
   type Badge, type Result,
 } from './score';
 import { load, save as persist, fresh, type SaveState, type Speed } from './save';
@@ -25,23 +25,21 @@ export type MetaView = { text: string } | { zone: string; fm: number; pct: numbe
 export interface HaulRow { b: Badge; isNew: boolean; animate: boolean; key: string }
 /** The badge being revealed right now, or the closing outranked line. */
 export type NowView = { key: number; b: Badge; isNew: boolean; style: HLStyle } | { key: number; outranked: Badge[] };
-export type FinishView =
-  | { kind: 'mythic'; r: Result }
-  | { kind: 'dive'; total: number; best: boolean; tier: number; avgFm: number; top: Result; squares: string; share: string };
+export type FinishView = { r: Result };
 export interface View {
   haulTitle: string; haulCount: string;
   haul: null | { rows: HaulRow[]; outranked: Badge[] };
   stamp: { text: string; mythic: boolean; hit: number };
-  meta: MetaView; now: NowView | null; rollLabel: string; mode: 'free' | 'dive'; auto: boolean;
+  meta: MetaView; now: NowView | null; rollLabel: string; auto: boolean;
   drawer: { open: boolean; tab: Tab; checkN: number | null };
   finish: FinishView | null;
   toasts: { id: number; text: string }[];
-  live: string; dive: Result[];
+  live: string;
 }
 export const V: View = {
   haulTitle: 'Depth chart', haulCount: 'EP needed', haul: null, stamp: { text: '', mythic: false, hit: 0 },
-  meta: { text: '0 to 1,000,000. Every roll counts.' }, now: null, rollLabel: 'Roll', mode: 'free', auto: false,
-  drawer: { open: false, tab: 'log', checkN: null }, finish: null, toasts: [], live: '', dive: [],
+  meta: { text: '0 to 1,000,000. Every roll counts.' }, now: null, rollLabel: 'Roll', auto: false,
+  drawer: { open: false, tab: 'log', checkN: null }, finish: null, toasts: [], live: '',
 };
 let version = 0;
 const subs = new Set<() => void>();
@@ -55,7 +53,7 @@ export const Sound = createSound(() => S.opts);
 let Scene: Scene, FXs: FX, Reel: Reels;
 
 /* ---------- Game state ---------- */
-export const G = { busy: false, skip: false, auto: false, mode: 'free' as 'free' | 'dive', dive: [] as Result[], preview: false, wake: null as null | (() => void), lastResult: null as Result | null };
+export const G = { busy: false, skip: false, auto: false, preview: false, wake: null as null | (() => void), lastResult: null as Result | null };
 const $ = (id: string) => document.getElementById(id)!;
 function setTier(color: string) { document.documentElement.style.setProperty('--tier', color); }
 function shake(amp: number, ms = 420) {
@@ -131,7 +129,7 @@ function notify(r: Result, info: Info) {
 }
 let finishDone: null | (() => void) = null;
 function mythicCard(r: Result) {
-  return new Promise<void>(res => { finishDone = res; V.finish = { kind: 'mythic', r }; emit(); });
+  return new Promise<void>(res => { finishDone = res; V.finish = { r }; emit(); });
 }
 export function closeFinish() { V.finish = null; emit(); const f = finishDone; finishDone = null; f?.(); }
 
@@ -169,13 +167,10 @@ export async function play(n: number, { preview = false } = {}) {
   showFinal(r); celebrate(r, speed);
   G.lastResult = r;
   refreshStats(); if (!preview) { if (info.fresh.size) bump('sBadges'); notify(r, info); }
-  if (G.mode === 'dive' && !preview) diveStep(r);
-  V.rollLabel = G.mode === 'dive' && G.dive.length >= 10 ? 'Dive again' : 'Roll';
   G.busy = false;
   emit();
 
   if (r.tier === 6 && speed !== 'instant' && !G.auto && !preview) await mythicCard(r);
-  if (G.mode === 'dive' && G.dive.length >= 10 && !preview) { setAuto(false); return diveFinish(); }
   if (G.auto) {
     if (shouldStop(r, info)) { setAuto(false); toast('Auto stopped'); emit(); return; }
     await new Promise(res => setTimeout(res, document.hidden ? 40 : cfg.hold));
@@ -224,30 +219,11 @@ function flashZone(t: number) {
 export function rollNext() {
   if (G.busy) { G.skip = true; if (G.wake) G.wake(); return; }
   if (V.finish || V.drawer.open) return;
-  if (G.mode === 'dive' && G.dive.length >= 10) { resetDive(); }
   play(randomRoll());
 }
 export function setAuto(on: boolean) {
   G.auto = on; V.auto = on; emit();
   if (on && !G.busy) rollNext();
-}
-
-/* ---------- 10-roll dive ---------- */
-function resetDive() { G.dive = []; V.dive = []; }
-function diveStep(r: Result) { G.dive.push(r); V.dive = [...G.dive]; }
-const SQUARES = ['⬛', '⬜', '🟩', '🟦', '🟪', '🟧', '🟥'];
-function diveFinish() {
-  const total = G.dive.reduce((a, r) => a + r.total, 0), best = total > S.bestDive, top = G.dive.reduce((a, r) => r.total > a.total ? r : a);
-  if (best) { S.bestDive = total; save(); }
-  const u = zoneOf(total / 10), t = tierOf(total / 10), squares = G.dive.map(r => SQUARES[r.tier]).join('');
-  const share = `Million Fathoms 10-roll dive\n${squares}\n${fmt(total)} EP, best roll ${fmt(top.n)}`;
-  V.finish = { kind: 'dive', total, best, tier: t, avgFm: fathoms(u), top, squares, share };
-  emit(); Sound.stinger(Math.max(2, t));
-}
-export function diveAgain() { V.finish = null; resetDive(); emit(); rollNext(); }
-export function setMode(m: 'free' | 'dive') {
-  G.mode = m; V.mode = m; setAuto(false);
-  resetDive(); V.rollLabel = 'Roll'; emit();
 }
 
 /* ---------- Drawer and settings ---------- */
@@ -266,7 +242,7 @@ export function setOpt<K extends 'sound' | 'vol' | 'ambient' | 'effects'>(k: K, 
   save(); emit();
 }
 export function wipe() {
-  const opts = S.opts; S = fresh(); S.opts = opts; G.dive = []; V.dive = []; save(); Scene.setBest(null); Scene.sink(0, 5);
+  const opts = S.opts; S = fresh(); S.opts = opts; save(); Scene.setBest(null); Scene.sink(0, 5);
   Reel.setNow(0); tweenEP(0, 0); V.now = null; V.stamp = { text: '', mythic: false, hit: 0 }; V.meta = { text: 'Progress erased. Ready to dive.' }; idleHaul(); emit();
 }
 

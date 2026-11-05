@@ -20,7 +20,7 @@ const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (
     if (seed) await ctx.addInitScript(s => { if (!sessionStorage.getItem('seeded')) { localStorage.setItem('million-fathoms-v1', s); sessionStorage.setItem('seeded', '1'); } }, seed);
     await p.goto(FILE); await p.waitForTimeout(700); return p;
   }
-  // A roll that ends on a card (Mythic or end of dive) is closed before carrying on.
+  // A roll that ends on a card (Mythic) is closed before carrying on.
   const settle = async p => { await p.waitForFunction(() => !MF.game.busy, null, { timeout: 30000 }); await p.waitForTimeout(150); if (await p.isVisible('#fClose')) await p.click('#fClose'); };
 
   const p = await page({ viewport: { width: 1360, height: 820 } });
@@ -147,12 +147,14 @@ const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (
   await p.keyboard.press('2'); expect(await p.evaluate(() => MF.state.opts.speed === 'fast'), 'key 2 sets Fast');
   await p.keyboard.press('b'); await p.waitForTimeout(200); expect(await p.isVisible('.card'), 'key B opens badges'); await p.keyboard.press('Escape');
   await p.keyboard.press('m'); expect(await p.evaluate(() => MF.state.opts.sound === false), 'key M mutes'); await p.keyboard.press('m');
-  // 10-roll dive
-  await p.click('#modeDive'); await p.click('[data-speed=fast]');
-  for (let i = 0; i < 10; i++) { await p.keyboard.press('Space'); await p.waitForTimeout(40); await p.waitForFunction(() => !MF.game.busy, null, { timeout: 30000 }); await p.waitForTimeout(100); if (await p.evaluate(() => !document.getElementById('finish').hidden && MF.game.dive.length < 10)) await p.click('#fClose'); }
-  await p.waitForTimeout(500);
-  await p.screenshot({ path: `${OUT}/8-dive.png` });
-  expect(await p.isVisible('#fAgain'), 'dive finish card shows after 10 rolls');
+  // ten Fast rolls in a row; the dive mode is gone, and each badge shows a pixel glyph rather than an emoji
+  await p.click('[data-speed=fast]');
+  for (let i = 0; i < 10; i++) { await p.keyboard.press('Space'); await p.waitForTimeout(40); await settle(p); }
+  await p.waitForTimeout(300);
+  await p.screenshot({ path: `${OUT}/8-rolls.png` });
+  expect(!(await p.$('#modeDive')) && !(await p.$('#run')), 'no 10-roll dive controls');
+  const glyphs = await p.evaluate(() => ({ n: document.querySelectorAll('.row svg.ic path[d]').length, text: [...document.querySelectorAll('.row .ic')].every(e => e.tagName === 'svg' && !e.textContent.trim()) }));
+  expect(glyphs.n > 0 && glyphs.text, `badge rows show pixel glyphs (${glyphs.n})`);
   // saved progress survives reload
   await p.waitForTimeout(400);
   const saved = await p.evaluate(() => MF.state.rolls); await p.reload(); await p.waitForTimeout(600);

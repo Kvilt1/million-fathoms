@@ -5,10 +5,10 @@ export interface Opts { sound: boolean; vol: number; ambient: boolean; speed: Sp
 export interface LogEntry { n: number; t: number; k: number; f: number }
 export interface SaveState {
   rolls: number; life: number; best: { n: number; total: number; tier: number } | null; tiers: number[];
-  badges: Record<string, number>; sets: Record<string, unknown>; log: LogEntry[]; bestDive: number; opts: Opts;
+  badges: Record<string, number>; sets: Record<string, unknown>; log: LogEntry[]; opts: Opts;
 }
 export const fresh = (): SaveState => ({
-  rolls: 0, life: 0, best: null, tiers: [0, 0, 0, 0, 0, 0, 0], badges: {}, sets: {}, log: [], bestDive: 0,
+  rolls: 0, life: 0, best: null, tiers: [0, 0, 0, 0, 0, 0, 0], badges: {}, sets: {}, log: [],
   opts: { sound: true, vol: .7, ambient: true, speed: 'show', autoStop: '5', effects: true },
 });
 export function load(): SaveState {

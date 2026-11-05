@@ -1,21 +1,32 @@
 /* Small pieces shared by the haul list, the drawer and the check panel. */
 import type { CSSProperties } from 'react';
 import { TIERS, badgeColor, fmt, type Badge } from '../game/score';
+import { GLYPHS, glyphId } from '../game/glyphs';
 import type { HaulRow, NowView } from '../game/controller';
 
 export const cssVars = (v: Record<string, string>) => v as CSSProperties;
 
-const SEG = window.Intl && Intl.Segmenter ? new Intl.Segmenter('en', { granularity: 'grapheme' }) : null;
-export function Icon({ b, base }: { b: Badge; base: number }) {
-  const n = SEG ? [...SEG.segment(b.icon)].length : 1;
-  return <span className="ic" aria-hidden="true" style={{ fontSize: Math.round(base * [1, 1, .72, .5, .4][Math.min(n, 4)]) }}>{b.icon}</span>;
+/* A badge's pixel glyph: each run of lit pixels in a row becomes one rect-shaped subpath, so it stays crisp
+   at any multiple of 8px and takes its colour from the tier through `currentColor`. */
+const PATHS = new Map<string, string>();
+function glyphPath(id: string) {
+  let d = PATHS.get(id);
+  if (d === undefined) {
+    d = '';
+    GLYPHS[id].forEach((row, y) => { for (const m of row.matchAll(/#+/g)) d += `M${m.index} ${y}h${m[0].length}v1h-${m[0].length}z`; });
+    PATHS.set(id, d);
+  }
+  return d;
+}
+export function Icon({ b }: { b: Badge }) {
+  return <svg className="ic" viewBox="0 0 8 8" shapeRendering="crispEdges" aria-hidden="true"><path d={glyphPath(glyphId(b.name, b.family) ?? 'spark')} fill="currentColor" /></svg>;
 }
 
 export function Row({ row }: { row: HaulRow }) {
   const { b, isNew, animate } = row;
   return (
     <li className={`row ${b.ep >= 10000 ? 'big' : ''} ${animate ? 'in' : ''}`} style={cssVars({ '--c': badgeColor(b.ep) })}>
-      <Icon b={b} base={20} />
+      <Icon b={b} />
       <span className="nm">{b.name}{isNew && <span className="new">New</span>}<span className="ds">{b.desc}</span></span>
       <span className="pts">+{fmt(b.ep)}</span>
     </li>
@@ -50,7 +61,7 @@ export function Now({ now }: { now: NowView }) {
   const { b, isNew, style } = now, note = STYLE_NOTE[style];
   return (
     <div className="now" id="now" style={cssVars({ '--c': badgeColor(b.ep) })}>
-      <div className="now-name"><Icon b={b} base={24} /><span className="nm">{b.name}</span>{isNew && <span className="new">New</span>}<span className="now-ep">+{fmt(b.ep)}</span></div>
+      <div className="now-name"><Icon b={b} /><span className="nm">{b.name}</span>{isNew && <span className="new">New</span>}<span className="now-ep">+{fmt(b.ep)}</span></div>
       <div className="now-desc">{b.desc}{note && <span className="now-note"> · {note}</span>}</div>
     </div>
   );
