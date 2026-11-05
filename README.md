@@ -4,7 +4,11 @@ An offline arcade number game. Roll a number from 0 to 1,000,000, earn badges fo
 
 Unofficial fan game based on RNGdle's scoring. It has no connection to RNGdle.
 
-**Play:** open `dist/million-fathoms.html` in any browser. It's one self-contained file with no network requests.
+**Play online:** https://kvilt1.github.io/million-fathoms/
+
+**Play offline:** open `dist/million-fathoms.html` in any browser. It's one self-contained file with no network requests.
+
+Every push to `main` rebuilds the game and publishes it to GitHub Pages (`.github/workflows/pages.yml`).
 
 ## Layout
 
