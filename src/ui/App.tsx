@@ -5,7 +5,7 @@ import {
   useGame, start, rollNext, setAuto, setSpeed, setAutoStop, setMode, openDrawer, toggleSound, Sound, G,
 } from '../game/controller';
 import type { Speed } from '../game/save';
-import { Row, Outranked, Ladder } from './parts';
+import { Row, Outranked, Ladder, Now } from './parts';
 import { Drawer } from './Drawer';
 import { Finish } from './Finish';
 
@@ -38,14 +38,19 @@ export function App() {
             <div className="stat" id="sBadges"><b>{found}/233</b><span>Badges</span></div>
           </div>
           <button className="icon-btn" id="btnSound" aria-pressed={S.opts.sound} aria-label="Sound" onClick={toggleSound}>
-            <svg viewBox="0 0 24 24"><path d="M4 9.5v5h4l5 4V5.500l-5 4H4z" /><path id="soundWaves" d="M16.500 9a4 4 0 0 1 0 6M19 6.500a8 8 0 0 1 0 11" style={{ display: S.opts.sound ? undefined : 'none' }} /></svg>
+            <svg viewBox="0 0 20 16" aria-hidden="true">
+              <path d="M2 6h3l4-4v12l-4-4H2z" />
+              {S.opts.sound
+                ? <g id="soundWaves"><rect x="11" y="6" width="2" height="4" /><rect x="14" y="4" width="2" height="8" /><rect x="17" y="2" width="2" height="12" /></g>
+                : <g><rect x="12" y="4" width="2" height="2" /><rect x="16" y="4" width="2" height="2" /><rect x="14" y="7" width="2" height="2" /><rect x="12" y="10" width="2" height="2" /><rect x="16" y="10" width="2" height="2" /></g>}
+            </svg>
           </button>
         </div>
 
         <section className="console" aria-label="Roll console">
           <div className="run" id="run" hidden={V.mode !== 'dive'}>
             <div className="pips" id="pips">
-              {Array.from({ length: 10 }, (_, i) => { const r = V.dive[i]; return <span key={i} className={`pip ${r ? 'on' : ''}`} style={{ color: r ? TIERS[r.tier].color : 'inherit' }} />; })}
+              {Array.from({ length: 10 }, (_, i) => { const r = V.dive[i]; return <span key={i} className={`pip ${r ? 'on' : i === V.dive.length ? 'cur' : ''}`} style={{ color: r ? TIERS[r.tier].color : 'inherit' }} />; })}
             </div>
             <span>Dive total <b id="runTotal">{fmt(V.dive.reduce((a, r) => a + r.total, 0))}</b> EP</span>
           </div>
@@ -54,10 +59,12 @@ export function App() {
           </div>
           <div className="readout">
             <div className="ep" id="ep" />
-            <div key={V.stamp.hit} className={'stamp' + (V.stamp.mythic ? ' t6' : '') + (V.stamp.hit ? ' hit' : '')} id="stamp">{V.stamp.text}</div>
-            <div className="meta" id="meta">
-              {'text' in m ? m.text : <><b>{m.zone}</b>, {fmt(m.fm)} fathoms. Beats <b>{pctText(m.pct)}%</b> of rolls.</>}
-            </div>
+            {V.now ? <Now key={V.now.key} now={V.now} /> : <>
+              <div key={V.stamp.hit} className={'stamp' + (V.stamp.mythic ? ' t6' : '') + (V.stamp.hit ? ' hit' : '')} id="stamp">{V.stamp.text}</div>
+              <div className="meta" id="meta">
+                {'text' in m ? m.text : <><b>{m.zone}</b>, {fmt(m.fm)} fathoms. Beats <b>{pctText(m.pct)}%</b> of rolls.</>}
+              </div>
+            </>}
           </div>
           <div className="controls">
             <button className="roll" id="btnRoll" onClick={() => { Sound.init(); rollNext(); }}><span id="rollLabel">{V.rollLabel}</span><kbd>Space</kbd></button>

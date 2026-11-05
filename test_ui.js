@@ -46,16 +46,50 @@ const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (
   await p.keyboard.press('Space'); await p.waitForTimeout(300); await p.keyboard.press('Space');
   const t0s = Date.now(); await settle(p);
   expect(Date.now() - t0s < 2500, `Skip ends a Show roll quickly (${Date.now() - t0s} ms)`);
-  // deep rolls through the show path
-  await p.evaluate(() => MF.play(777777, { preview: true }));
+  // the slow reveal: one badge at a time, with the digits that earned it lit
+  const nowName = () => document.querySelector('#now .nm')?.textContent;
+  const litReels = () => [...document.querySelectorAll('.reel')].flatMap((r, i) => r.classList.contains('lit') ? [i] : []);
+  const watchReveal = () => p.evaluate(() => {
+    window.__now = [];
+    new MutationObserver(() => {
+      const el = document.getElementById('now'), t = el ? (el.querySelector('.nm')?.textContent || 'outranked') : null;
+      if (t && t !== window.__now.at(-1)?.[0]) window.__now.push([t, performance.now()]);
+    }).observe(document.querySelector('.readout'), { childList: true, subtree: true });
+  });
+  await watchReveal();
+  await p.evaluate(() => { MF.play(142857, { preview: true }); });
+  await p.waitForFunction(n => document.querySelector('#now .nm')?.textContent === n, 'Grounded', { timeout: 15000 });
+  const gr = await p.evaluate(`({ lit: (${litReels})(), span: document.querySelectorAll('.reel.span').length, desc: document.querySelector('#now .now-desc').textContent })`);
+  expect(gr.lit.join() === '1,6' && gr.span === 4 && gr.desc.startsWith('First digit smaller'), `reveal: Grounded lights the first and last digit (${gr.lit})`);
+  await p.waitForFunction(n => document.querySelector('#now .nm')?.textContent === n, 'Meaning of Life', { timeout: 20000 });
+  await p.waitForTimeout(550);
+  await p.screenshot({ path: `${OUT}/2b-reveal.png` });
+  const ml = await p.evaluate(`({ lit: (${litReels})(), ep: document.getElementById('ep').textContent, name: (${nowName})() })`);
+  expect(ml.lit.join() === '2,3' && ml.ep.startsWith('8,131'), `reveal: Meaning of Life lights only the 4 and 2, total counts up to ${ml.ep}`);
+  await p.waitForSelector('#now.dim', { timeout: 5000 });
+  expect((await p.textContent('#now')).includes('Dunes'), 'reveal: outranked badges get a "no EP" line at the end');
+  await settle(p);
+  const done = await p.evaluate(`({ now: !!document.getElementById('now'), lit: (${litReels})().length, stamp: document.getElementById('stamp').textContent })`);
+  expect(!done.now && !done.lit && done.stamp === 'Uncommon', 'reveal: highlights clear and the tier stamp shows at the end');
+  const gaps = await p.evaluate(() => window.__now.slice(1).map(([, t], i) => Math.round(t - window.__now[i][1])));
+  expect(gaps.length === 16 && gaps.every(g => g > 900 && g < 1200), `reveal: about 1 s per badge at Show speed (${gaps.join(', ')})`);
+  // deep rolls through the show path: rarer badges stay up longer
+  await watchReveal();
+  await p.evaluate(() => { MF.play(777777, { preview: true }); });
   await p.waitForTimeout(600);
-  await p.waitForFunction(() => !MF.game.busy, null, { timeout: 30000 });
+  await p.waitForFunction(() => !MF.game.busy, null, { timeout: 60000 });
   await p.waitForTimeout(1500);
   await p.screenshot({ path: `${OUT}/4-mythic.png` });
   expect((await p.textContent('#stamp')) === 'Mythic', 'Mythic stamp shows for 777777');
+  const rare = await p.evaluate(() => {
+    const tier = Object.fromEntries(MF.scoreRoll(777777).paid.map(b => [b.name, b.tier]));
+    return window.__now.slice(0, -1).map(([nm, t], i) => [nm, Math.round(window.__now[i + 1][1] - t), MF.badgeMs('show', tier[nm])]);
+  });
+  console.log('777777 reveal', rare.map(([n, g, w]) => `${n} ${g}/${w}`).join(', '));
+  expect(rare.length === 20 && rare.every(([, g, w]) => Math.abs(g - w) < 150), 'reveal: each badge holds for its tuned time, longer for rarer ones');
   // a real Mythic roll shows its card
   await p.evaluate(() => { MF.play(777777); });
-  await p.waitForSelector('#fClose', { timeout: 30000, state: 'visible' });
+  await p.waitForSelector('#fClose', { timeout: 60000, state: 'visible' });
   await p.waitForTimeout(300); await p.screenshot({ path: `${OUT}/4b-card.png` });
   await p.click('#fClose');
   // every sound fires without error
@@ -66,11 +100,17 @@ const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (
   await p.screenshot({ path: `${OUT}/4c-shallow.png` });
   await p.click('[data-speed=show]');
   await p.click('[data-speed=fast]');
+  const tf = Date.now();
   for (let i = 0; i < 12; i++) { await p.keyboard.press('Space'); await p.waitForTimeout(60); await settle(p); }
-  console.log('fast rolls', await p.evaluate(() => MF.state.rolls)); const base = await p.evaluate(() => MF.state.rolls);
+  const perFast = (Date.now() - tf) / 12;
+  console.log('fast rolls', await p.evaluate(() => MF.state.rolls), `${perFast.toFixed(0)} ms each`); const base = await p.evaluate(() => MF.state.rolls);
+  expect(perFast < 3000, `Fast speed stays quick (${perFast.toFixed(0)} ms a roll including checks)`);
   // instant auto
   await p.click('[data-speed=instant]'); await p.selectOption('#autoStop', '9');
-  const t0 = Date.now(); await p.click('#btnAuto'); await p.waitForTimeout(4000); await p.click('#btnAuto');
+  const t0 = Date.now(); await p.click('#btnAuto');
+  let sawNow = false; for (let i = 0; i < 20; i++) { await p.waitForTimeout(200); sawNow ||= await p.evaluate(() => !!document.getElementById('now') || !!document.querySelector('.reel.lit')); }
+  await p.click('#btnAuto');
+  expect(!sawNow, 'Instant has no reveal');
   await p.waitForFunction(() => !MF.game.busy); await p.waitForTimeout(150);
   const s = await p.evaluate(() => ({ rolls: MF.state.rolls, badges: Object.keys(MF.state.badges).length, tiers: MF.state.tiers, logLen: MF.state.log.length }));
   const rate = (s.rolls - base) / ((Date.now() - t0) / 1000);
@@ -128,10 +168,22 @@ const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (
   expect(carried.rolls === 42 && carried.badges === '3/233' && carried.speed === 'fast' && carried.title === 'Last roll' && carried.ep.startsWith('4,634'), 'a save from the original build carries over');
   // reduced motion: no shake or particles
   const r = await page({ viewport: { width: 1100, height: 760 }, reducedMotion: 'reduce' });
-  await r.evaluate(() => MF.play(777777, { preview: true })); await r.waitForTimeout(400);
-  await r.waitForFunction(() => !MF.game.busy, null, { timeout: 30000 });
-  const calm = await r.evaluate(() => ({ shake: document.getElementById('app').classList.contains('shake'), dur: getComputedStyle(document.getElementById('stamp')).animationDuration }));
+  await r.evaluate(() => { MF.play(777777, { preview: true }); }); await r.waitForTimeout(250);
+  const midSpin = await r.evaluate(() => ({ blank: document.querySelectorAll('.reel.blank').length, moved: [...document.querySelectorAll('.strip')].some(s => !/^translate3d\(0px, -?\d+(\.0+)?px, 0px\)$/.test(s.style.transform) || parseFloat(s.style.transform.split(',')[1]) % 1) }));
+  expect(midSpin.blank > 0 && !midSpin.moved, 'reduced motion: reels blank out and snap instead of scrolling');
+  await r.waitForFunction(() => !MF.game.busy, null, { timeout: 60000 });
+  const calm = await r.evaluate(() => ({ shake: document.getElementById('app').classList.contains('shake'), dur: getComputedStyle(document.getElementById('stamp')).animationDuration, scan: getComputedStyle(document.querySelector('.machine'), '::after').display }));
   expect(!calm.shake && parseFloat(calm.dur) < .001, `reduced motion: no shake, animations off (${calm.dur})`);
+  expect(calm.scan === 'none', 'reduced motion: no scan line on the reels');
+  await r.evaluate(() => document.getElementById('btnAuto').setAttribute('aria-pressed', 'true'));
+  const pulse = await r.evaluate(() => getComputedStyle(document.getElementById('btnAuto')).animationIterationCount);
+  expect(pulse === '1', `reduced motion: no glow pulse on Auto (${pulse})`);
+  const still = await r.evaluate(async () => {
+    const c = document.getElementById('scene'), a = c.toDataURL();
+    await new Promise(res => setTimeout(res, 700));
+    return a === c.toDataURL();
+  });
+  expect(still, 'reduced motion: the depth scene holds still');
   // phone
   const m = await page({ ...devices['iPhone 13'] });
   await m.screenshot({ path: `${OUT}/10-phone-idle.png` });

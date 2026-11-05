@@ -12,6 +12,8 @@ import { createSound } from '../engine/sound';
 import { createScene, type Scene } from '../engine/scene';
 import { createFX, type FX } from '../engine/fx';
 import { createReels, type Reels } from '../engine/reels';
+import { REELS, TENSE, REVEAL, badgeMs } from './timing';
+import { highlight, type HLStyle } from './highlights';
 
 export const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 export let S: SaveState = load();
@@ -21,6 +23,8 @@ const save = () => persist(S);
 export type Tab = 'log' | 'codex' | 'sets' | 'check' | 'how' | 'settings';
 export type MetaView = { text: string } | { zone: string; fm: number; pct: number };
 export interface HaulRow { b: Badge; isNew: boolean; animate: boolean; key: string }
+/** The badge being revealed right now, or the closing outranked line. */
+export type NowView = { key: number; b: Badge; isNew: boolean; style: HLStyle } | { key: number; outranked: Badge[] };
 export type FinishView =
   | { kind: 'mythic'; r: Result }
   | { kind: 'dive'; total: number; best: boolean; tier: number; avgFm: number; top: Result; squares: string; share: string };
@@ -28,7 +32,7 @@ export interface View {
   haulTitle: string; haulCount: string;
   haul: null | { rows: HaulRow[]; outranked: Badge[] };
   stamp: { text: string; mythic: boolean; hit: number };
-  meta: MetaView; rollLabel: string; mode: 'free' | 'dive'; auto: boolean;
+  meta: MetaView; now: NowView | null; rollLabel: string; mode: 'free' | 'dive'; auto: boolean;
   drawer: { open: boolean; tab: Tab; checkN: number | null };
   finish: FinishView | null;
   toasts: { id: number; text: string }[];
@@ -36,7 +40,7 @@ export interface View {
 }
 export const V: View = {
   haulTitle: 'Depth chart', haulCount: 'EP needed', haul: null, stamp: { text: '', mythic: false, hit: 0 },
-  meta: { text: '0 to 1,000,000. Every roll counts.' }, rollLabel: 'Roll', mode: 'free', auto: false,
+  meta: { text: '0 to 1,000,000. Every roll counts.' }, now: null, rollLabel: 'Roll', mode: 'free', auto: false,
   drawer: { open: false, tab: 'log', checkN: null }, finish: null, toasts: [], live: '', dive: [],
 };
 let version = 0;
@@ -52,11 +56,6 @@ let Scene: Scene, FXs: FX, Reel: Reels;
 
 /* ---------- Game state ---------- */
 export const G = { busy: false, skip: false, auto: false, mode: 'free' as 'free' | 'dive', dive: [] as Result[], preview: false, wake: null as null | (() => void), lastResult: null as Result | null };
-const SPEED: Record<Speed, { spin: number; stagger: number; step: number; hold: number }> = {
-  show: { spin: 620, stagger: 150, step: 1, hold: 500 },
-  fast: { spin: 170, stagger: 34, step: .14, hold: 170 },
-  instant: { spin: 0, stagger: 0, step: 0, hold: 50 },
-};
 const $ = (id: string) => document.getElementById(id)!;
 function setTier(color: string) { document.documentElement.style.setProperty('--tier', color); }
 function shake(amp: number, ms = 420) {
@@ -140,9 +139,9 @@ export function closeFinish() { V.finish = null; emit(); const f = finishDone; f
 export async function play(n: number, { preview = false } = {}) {
   if (G.busy) return;
   G.busy = true; G.skip = false; G.preview = preview; Sound.init();
-  const speed: Speed = document.hidden ? 'instant' : S.opts.speed, cfg = SPEED[speed], r = scoreRoll(n);
+  const speed: Speed = document.hidden ? 'instant' : S.opts.speed, cfg = REELS[speed], r = scoreRoll(n);
   V.rollLabel = speed === 'instant' ? 'Roll' : 'Skip';
-  setTier('#eafcff'); Reel.tint('#5ef2e4'); Scene.tierNow = 0;
+  setTier('var(--foam)'); Reel.tint('var(--cyan)'); Scene.tierNow = 0;
   V.haulTitle = preview ? 'Replay' : `Roll ${fmt(S.rolls + 1)}`; V.haulCount = '';
   V.stamp = { text: '', mythic: false, hit: 0 };
 
@@ -155,31 +154,11 @@ export async function play(n: number, { preview = false } = {}) {
     V.haul = { rows: [], outranked: [] }; tweenEP(0, 0); V.meta = { text: 'Sounding...' }; emit();
     Scene.sink(0, speed === 'show' ? 7 : 16);
     if (speed === 'show') Sound.press();
-    const tense = speed === 'show' ? [0, 0, 0, 0, 500, 1300, 2200][r.tier] : 0;
+    const tense = speed === 'show' ? TENSE[r.tier] : 0;
     await Reel.spin(n, { spinMs: cfg.spin, stagger: cfg.stagger, tense, skip: () => G.skip });
     Scene.sink(.05, 6); if (speed === 'show' && !G.skip) Sound.plunge();
-
-    const order = r.paid.slice().sort((a, b) => a.ep - b.ep);
-    let running = 0, tierNow = 0, i = 0;
-    const base = clamp(1500 / order.length, 45, 165);
-    for (const b of order) {
-      running += b.ep;
-      if (!G.skip) {
-        V.haul = { rows: [...rows([b], () => !preview && !S.badges[b.name], true), ...V.haul!.rows], outranked: [] }; emit();
-        if (speed === 'show') Sound.ping(i, b.tier); else if (i % 2 === 0) Sound.blip(b.tier);
-        Scene.sink(zoneOf(running), speed === 'show' ? 4 + b.tier : 12);
-        tweenEP(running, speed === 'show' ? Math.min(150, base) : 40);
-        const t = tierOf(running);
-        if (t > tierNow) {
-          tierNow = t; setTier(TIERS[t].color); Reel.tint(TIERS[t].color); Scene.tierNow = t;
-          if (t >= 2 && speed === 'show') { Scene.ping(); Sound.sonar(zoneOf(running)); flashZone(t); }
-        }
-        i++;
-        const hold = b.tier >= 2 && speed === 'show' ? 200 + b.tier * 150 : 0;
-        if (speed === 'show' && b.tier >= 2) { const q = $('reels').getBoundingClientRect(); FXs.burst(q.right, q.top + q.height / 2, badgeColor(b.ep), 8 + b.tier * 6, 2 + b.tier); shake(b.tier * 1.1, 200); }
-        await wait(base * (speed === 'show' ? 1 : cfg.step * 3) + hold);
-      }
-    }
+    await reveal(r, speed, preview);
+    Reel.highlight(n, null); V.now = null;
     if (G.skip) tweenEP(r.total, 0);
   }
 
@@ -201,6 +180,37 @@ export async function play(n: number, { preview = false } = {}) {
     if (shouldStop(r, info)) { setAuto(false); toast('Auto stopped'); emit(); return; }
     await new Promise(res => setTimeout(res, document.hidden ? 40 : cfg.hold));
     if (G.auto) rollNext();
+  }
+}
+/* The slow reveal: one badge at a time, cheapest first, each lighting the digits that earned it and
+   adding its EP to the running total. Outranked badges get one dimmed line at the end. Skip ends it. */
+let nowKey = 0;
+async function reveal(r: Result, speed: 'show' | 'fast', preview: boolean) {
+  const R = REVEAL[speed], show = speed === 'show', order = r.paid.slice().sort((a, b) => a.ep - b.ep);
+  let running = 0, tierNow = 0, i = 0;
+  if (R.lead && !G.skip) await wait(R.lead);
+  for (const b of order) {
+    if (G.skip) return;
+    running += b.ep;
+    const isNew = !preview && !S.badges[b.name], color = badgeColor(b.ep), hl = highlight(b.name, r.n);
+    V.now = { key: ++nowKey, b, isNew, style: hl.style };
+    V.haul = { rows: [...rows([b], () => isNew, true), ...V.haul!.rows], outranked: [] }; emit();
+    const at = Reel.highlight(r.n, hl, color);
+    if (show) Sound.ping(i, b.tier); else if (i % 2 === 0) Sound.blip(b.tier);
+    Scene.sink(zoneOf(running), show ? 4 + b.tier : 12);
+    tweenEP(running, R.count);
+    const t = tierOf(running);
+    if (t > tierNow) {
+      tierNow = t; setTier(TIERS[t].color); Reel.tint(TIERS[t].color); Scene.tierNow = t;
+      if (t >= 2 && show) { Scene.ping(); Sound.sonar(zoneOf(running)); flashZone(t); }
+    }
+    if (show && b.tier >= 2) { FXs.burst(at.x, at.y, color, 8 + b.tier * 6, 2 + b.tier); shake(b.tier * 1.1, 200); }
+    i++;
+    await wait(badgeMs(speed, b.tier));
+  }
+  if (r.outranked.length && !G.skip) {
+    Reel.highlight(r.n, null); V.now = { key: ++nowKey, outranked: r.outranked }; emit();
+    await wait(R.outranked);
   }
 }
 function shouldStop(r: Result, info: Info) {
@@ -257,7 +267,7 @@ export function setOpt<K extends 'sound' | 'vol' | 'ambient' | 'effects'>(k: K, 
 }
 export function wipe() {
   const opts = S.opts; S = fresh(); S.opts = opts; G.dive = []; V.dive = []; save(); Scene.setBest(null); Scene.sink(0, 5);
-  Reel.setNow(0); tweenEP(0, 0); V.stamp = { text: '', mythic: false, hit: 0 }; V.meta = { text: 'Progress erased. Ready to dive.' }; idleHaul(); emit();
+  Reel.setNow(0); tweenEP(0, 0); V.now = null; V.stamp = { text: '', mythic: false, hit: 0 }; V.meta = { text: 'Progress erased. Ready to dive.' }; idleHaul(); emit();
 }
 
 /* ---------- Keyboard ---------- */
@@ -286,7 +296,7 @@ export function start(els: { scene: HTMLCanvasElement; fx: HTMLCanvasElement; re
   if (started) return; started = true;
   Scene = createScene(els.scene, { reduced, onDepth: u => Sound.depth(u) });
   FXs = createFX(els.fx, () => !reduced && S.opts.effects);
-  Reel = createReels(els.reels, Sound);
+  Reel = createReels(els.reels, Sound, reduced);
   addEventListener('keydown', onKeyDown);
   addEventListener('keyup', onKeyUp);
   const boot = () => {
@@ -301,6 +311,6 @@ export function start(els: { scene: HTMLCanvasElement; fx: HTMLCanvasElement; re
     emit();
   };
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot); else boot();
-  Object.assign(window, { MF: { play, scoreRoll, Sound, get state() { return S; }, get game() { return G; } } });
+  Object.assign(window, { MF: { play, scoreRoll, Sound, highlight, badgeMs, get state() { return S; }, get game() { return G; } } });
 }
 export { ROLLS, MAX_ROLL, rollsBelow };

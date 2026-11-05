@@ -12,13 +12,17 @@ Built with React, TypeScript and Vite, bundled into a single HTML file by `vite-
 
 - `src/game/rules.js`: the 233 badge rules (plain JS, unchanged from the verified original)
 - `src/game/score.ts`: scoring, tiers, depth and the score distribution
-- `src/game/controller.ts`: the roll loop, saving, auto-roll and dives
+- `src/game/controller.ts`: the roll loop, the badge-by-badge reveal, saving, auto-roll and dives
+- `src/game/timing.ts`: every roll and reveal timing, in one place to tune
+- `src/game/highlights.ts`: which digits light up for each badge during the reveal (separate from the rules, so scoring can't change)
 - `src/game/data.json`: EP values, badge counts and the score distribution
 - `src/engine/`: the canvas scene, reels, particles and Web Audio sound
 - `src/ui/`: React components
-- `src/styles.css`, `src/fonts.css`: styling and embedded fonts
+- `src/styles.css`, `src/fonts.css`: styling and the embedded VT323 font
+- `docs/krillion-style-guide.md`: the visual reference for the look, colours, type and sound
 - `test_ui.js`: Playwright playthrough on desktop and phone
 - `tests/rules_snapshot.ts`: checks every rule and every roll's score against `tests/baseline.json`, recorded from the original game
+- `tests/highlights_test.ts`: runs every highlight function on sample numbers and on every earned badge of all 1,000,001 rolls
 - `test_rules.js`, `export_data.py`: checks against the Python reference scorer (not included)
 
 ## Build and test
@@ -28,5 +32,6 @@ npm install
 npx playwright install chromium
 npm run build
 npm run test:rules
+npm run test:highlights
 SHOTS=shots npm run test:ui
 ```

@@ -64,7 +64,7 @@ function PaneLog() {
       <thead><tr><th>Number</th><th className="r">EP</th><th>Tier</th><th className="r">New</th></tr></thead>
       <tbody>{S.log.map((l, i) => (
         <tr key={i} className="go" data-n={l.n} onClick={() => setTab('check', l.n)}>
-          <td>{fmt(l.n)}</td><td className="r">{fmt(l.t)}</td><td style={{ color: TIERS[l.k].color, fontWeight: 700 }}>{TIERS[l.k].name}</td><td className="r">{l.f || ''}</td>
+          <td>{fmt(l.n)}</td><td className="r">{fmt(l.t)}</td><td style={{ color: TIERS[l.k].color }}>{TIERS[l.k].name}</td><td className="r">{l.f || ''}</td>
         </tr>
       ))}</tbody>
     </table>
@@ -112,7 +112,7 @@ function PaneSets() {
       return (
         <div key={s.name} className="set">
           <h4>{s.name}<span>{n}/{s.members.length}</span></h4>
-          <div className="bar"><i style={{ width: `${100 * n / s.members.length}%`, ...(full ? { background: 'var(--hull)' } : {}) }} /></div>
+          <div className="bar"><i style={{ width: `${100 * n / s.members.length}%`, ...(full ? { background: 'var(--gold)', boxShadow: '0 0 8px var(--gold)' } : {}) }} /></div>
           <p>{s.desc} {s.members.map((m, i) => <span key={m}>{i > 0 && ', '}{S.badges[m] ? <b>{m}</b> : m}</span>)}</p>
         </div>
       );
@@ -166,7 +166,7 @@ function PaneHow() {
     <div style={{ overflowX: 'auto' }}>
       <table className="lad2">
         <thead><tr><th>Tier</th><th>Zone</th><th className="r">EP from</th><th>Share of rolls</th></tr></thead>
-        <tbody>{TIERS.map((t, i) => <tr key={t.name}><td style={{ color: t.color, fontWeight: 700 }}>{t.name}</td><td>{t.zone}</td><td className="r">{i ? fmt(t.floor) : '1,759'}</td><td>{t.note}</td></tr>).reverse()}</tbody>
+        <tbody>{TIERS.map((t, i) => <tr key={t.name}><td style={{ color: t.color }}>{t.name}</td><td>{t.zone}</td><td className="r">{i ? fmt(t.floor) : '1,759'}</td><td>{t.note}</td></tr>).reverse()}</tbody>
       </table>
     </div>
     <h3>Badge rarity</h3><p>Common appears on over 10% of rolls, Uncommon on 1 to 10%, Rare on 0.1 to 1%, Epic on 0.01 to 0.1%, Anomaly on 0.001 to 0.01%, and Mythic on less than 0.001%.</p>
@@ -181,13 +181,13 @@ function PaneSettings({ confirm, setConfirm }: { confirm: boolean; setConfirm: (
     <div className="settings">
       <label>Sound <input type="checkbox" id="oSound" checked={o.sound} onChange={e => setOpt('sound', e.target.checked)} /></label>
       <label>Volume <input type="range" id="oVol" min="0" max="1" step=".05" value={o.vol} onChange={e => setOpt('vol', +e.target.value)} onPointerUp={() => Sound.ping(4, 1)} onKeyUp={() => Sound.ping(4, 1)} /></label>
-      <label>Ocean ambience <input type="checkbox" id="oAmb" checked={o.ambient} onChange={e => setOpt('ambient', e.target.checked)} /></label>
+      <label>Ambient hum <input type="checkbox" id="oAmb" checked={o.ambient} onChange={e => setOpt('ambient', e.target.checked)} /></label>
       <label>Screen shake and particles <input type="checkbox" id="oFx" checked={o.effects} onChange={e => setOpt('effects', e.target.checked)} /></label>
       <p style={{ margin: '6px 0 0' }}>Keys: Space or Enter rolls and skips, A toggles auto, 1, 2 and 3 set speed, M mutes, B opens badges, Esc closes this panel.</p>
       <p style={{ margin: 0 }}>Your progress is saved in this browser only. {S.rolls ? `It holds ${fmt(S.rolls)} rolls.` : ''}</p>
       <div id="resetBox">
         {confirm
-          ? <><p style={{ color: 'var(--ink)' }}>Erase all rolls, badges and sets? This can't be undone.</p>
+          ? <><p style={{ color: 'var(--foam)' }}>Erase all rolls, badges and sets? This can't be undone.</p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn danger" id="oWipe" onClick={() => { wipe(); setConfirm(false); }}>Erase everything</button>
               <button className="btn ghost" id="oKeep" onClick={() => setConfirm(false)}>Keep my progress</button>
