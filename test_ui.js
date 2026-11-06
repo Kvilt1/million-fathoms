@@ -93,7 +93,13 @@ const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (
   await p.waitForTimeout(300); await p.screenshot({ path: `${OUT}/4b-card.png` });
   await p.click('#fClose');
   // every sound fires without error
-  await p.evaluate(() => { const s = MF.Sound; s.init(); s.tick(); s.clunk(2); s.ui(); s.press(); s.ping(3, 2); s.blip(1); s.sonar(4); s.plunge(); s.heart(); [0, 1, 2, 3, 4, 5, 6].forEach(t => s.stinger(t)); s.fresh(); s.fanfareSet(); s.depth(5); });
+  // with the music playing they are chord-aware and on the grid; the soundtrack has heated up from the rolls
+  const mus = await p.evaluate(() => { const s = MF.Sound; s.init(); s.tick(); s.clunk(2); s.ui(); s.press(); s.ping(3, 2, 3); s.blip(1); s.sonar(4, 3); s.plunge(); s.heart(); [0, 1, 2, 3, 4, 5, 6].forEach(t => s.stinger(t)); s.fresh(); s.fanfareSet(); s.depth(5); return s.music.state(); });
+  console.log('music', mus);
+  expect(mus.playing && mus.heat > 0, `music plays and heat built up over the rolls (heat ${mus.heat}, level ${mus.level})`);
+  await p.waitForTimeout(800);
+  const pitched = await p.evaluate(() => { const m = MF.Sound.music, a = m.at('16n'), b = m.at('4n'); return { grid: b >= a, tone: [0, 2].map(i => Math.round(m.pitch(i, 3))), chord: m.chord().rootDeg }; });
+  expect(pitched.grid && [0, -2, -3].includes(pitched.chord), `music clock gives grid times and the current chord (${pitched.chord}: ${pitched.tone})`);
   // an early roll, seen near the surface
   await p.click('[data-speed=fast]');
   await p.evaluate(() => MF.play(403602, { preview: true })); await p.waitForFunction(() => !MF.game.busy); await p.waitForTimeout(900);
@@ -123,11 +129,17 @@ const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (
       expect((await p.textContent('#cBody')).startsWith('That is not a roll'), 'number checker rejects 2,000,000');
     }
     if (t === 'settings') {
-      await p.click('#oSound'); expect(await p.evaluate(() => MF.state.opts.sound === false), 'sound setting toggles');
+      expect(await p.evaluate(() => MF.Sound.music.state().muffled), 'an open drawer muffles the music');
+      await p.click('#oSound'); expect(await p.evaluate(() => MF.state.opts.sound === false && !MF.Sound.music.state().playing), 'sound setting toggles, and stops the music');
       await p.click('#oSound');
+      expect(await p.textContent('label:has(#oAmb)') === 'Music ' && await p.isVisible('#oMusVol'), 'settings have a Music switch and a Music volume slider');
+      await p.click('#oAmb'); expect(await p.evaluate(() => MF.state.opts.ambient === false && !MF.Sound.music.state().playing), 'the Music switch stops the music');
+      await p.click('#oAmb'); expect(await p.evaluate(() => MF.state.opts.ambient === true && MF.Sound.music.state().playing), 'and starts it again');
+      await p.fill('#oMusVol', '0.3'); expect(await p.evaluate(() => MF.state.opts.musicVol === .3), 'music volume setting saves');
     }
     await p.keyboard.press('Escape'); await p.waitForTimeout(80);
     expect(!(await p.isVisible('#drawer')), `Escape closes the ${t} panel`);
+    if (t === 'settings') expect(await p.evaluate(() => !MF.Sound.music.state().muffled), 'closing the drawer unmuffles the music');
   }
   // keyboard shortcuts
   await p.keyboard.press('2'); expect(await p.evaluate(() => MF.state.opts.speed === 'fast'), 'key 2 sets Fast');
@@ -154,6 +166,7 @@ const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (
   const carried = await q.evaluate(() => ({ rolls: MF.state.rolls, badges: document.querySelector('#sBadges b').textContent, speed: MF.state.opts.speed, title: document.getElementById('haulTitle').textContent, ep: document.getElementById('ep').textContent }));
   console.log('old save', carried);
   expect(carried.rolls === 42 && carried.badges === '3/233' && carried.speed === 'fast' && carried.title === 'Last roll' && carried.ep.startsWith('4,634'), 'a save from the original build carries over');
+  expect(await q.evaluate(() => MF.state.opts.ambient === false && MF.state.opts.musicVol === .6), 'an old save keeps its Music setting (off) and gets the default music volume');
   // reduced motion: no shake or particles
   const r = await page({ viewport: { width: 1100, height: 760 }, reducedMotion: 'reduce' });
   await r.evaluate(() => { MF.play(777777, { preview: true }); }); await r.waitForTimeout(250);

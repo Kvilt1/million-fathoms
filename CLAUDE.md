@@ -16,6 +16,7 @@ npm run build                     # tsc --noEmit, then vite build -> dist/millio
 npm run test:rules                # every rule and every roll's score vs tests/baseline.json
 npm run test:highlights           # digit highlights on samples and on all 1,000,001 rolls
 npm run test:glyphs               # every badge maps to a valid 8x8 pixel glyph
+npm run test:music                # soundtrack patterns, key, progression and director scripts
 SHOTS=shots npm run test:ui       # Playwright playthrough of the BUILT file (build first)
 ```
 
@@ -40,9 +41,18 @@ SHOTS=shots npm run test:ui       # Playwright playthrough of the BUILT file (bu
 - `start()` (called once from `App`) creates the engines. `play(n)` runs a roll: spin the reels, reveal badges one at a time (Show/Fast speeds), then record, celebrate and notify. The menu offers only Normal (`show`) and Fast; there is no Auto or Instant. `RunSpeed` adds an internal `instant` that a hidden tab uses.
 - `window.MF` exposes `play`, `scoreRoll`, `Sound`, `highlight`, `badgeMs`, `state` and `game`. `test_ui.js` depends on it, so keep it working.
 
-**Timing.** Every roll and reveal duration lives in `src/game/timing.ts`, keyed by speed (`show` / `fast`, plus the internal `instant`) and tier. Tune timing there, and don't hard-code durations elsewhere. `test_ui.js` checks some reveal timing.
+**Timing.** Every roll and reveal duration lives in `src/game/timing.ts` (music timings live in `engine/music/score.ts`), keyed by speed (`show` / `fast`, plus the internal `instant`) and tier. Tune timing there, and don't hard-code durations elsewhere. `test_ui.js` checks some reveal timing.
 
-**Sound.** `engine/sound.ts` synthesises everything live with Web Audio and ships no audio files. It uses sine and triangle tones, filtered noise sweeps, and notes from C and G major. Downward glides mean deeper, upward glides mean success. The AudioContext starts lazily on a user gesture (`Sound.init()`).
+**Sound.** `engine/sound.ts` synthesises everything live with Web Audio and ships no audio files. It owns the AudioContext, the master compressor and the noise buffer, and starts lazily on a user gesture (`Sound.init()`). The effects use sine and triangle tones, filtered noise sweeps, and notes from C and G major. Downward glides mean deeper, upward glides mean success.
+
+**Music.** `engine/music/` is "Loaded Grid", an adaptive soundtrack at 112 BPM in A natural minor with the progression Am Am F Em, one chord per bar, always running. `Sound.init()` creates it from the same context, and it's exposed as `Sound.music`.
+- `score.ts` holds the pure data: tempo, progression, scale helpers, the 16-step patterns, `GAIN` (the approved draft's Strudel levels) with the measured `MIX_DB` trims, the `LEVELS`, `UNLOCKS`, `HEAT` and `MOMENTS` tables, and the music timings.
+- `director.ts` is the pure state machine. `reduce(state, MusicEvent, nextBar)` handles cues, `barTick()` advances a bar, and `targets(state, bar)` gives each layer's level. Heat (0 to 1) builds with every roll and cools when idle, and it sets the level: L0 idle, L1 groove, L2 hook, L3 drop. The level changes only on 4-bar phrase boundaries. Tier moments (Trash power-down up to the Mythic Hadal drop) cut in on the next downbeat. `S.best.tier` unlocks extra material. Depth sets pressure (drone, reverb, clank density), not energy.
+- `clock.ts` is a lookahead scheduler on `ac.currentTime`: a 25 ms interval schedules the next 0.12 s. `voices.ts` builds one-shot nodes that disconnect themselves when they end. `fx.ts` holds the buses (muffle, glass, gate, duck, fade, music volume), the generated-IR reverb and the dotted-eighth delay. `index.ts` is `createMusic()` with `start/stop/cue/at/pitch/chord/duck/state`.
+- The controller sends `Sound.music?.cue(...)` for press, skip, result, unlocks, drawer, finish and reset. `sound.ts` sends tense, reelsStopped, badge, tierUp and depth. Hidden-tab `instant` rolls send nothing, and the music stops while the page is hidden.
+- **SFX are chord-aware and quantized when music is on.** Each effect takes its pitch from `music.pitch()` (the chord sounding at that moment), and the melodic ones land on `music.at('16n' | '4n')` and echo through the tempo delay. When music is off, every effect sounds exactly as it did before. Tune the music in `score.ts` or `director.ts`, and keep `test:music` passing.
+
+**Settings.** `S.opts` holds `sound`, `vol`, `ambient`, `musicVol`, `speed` and `effects`. `ambient` is the "Music" switch (`#oAmb`) and keeps its old name for save compatibility, and `musicVol` (`#oMusVol`, default 0.6) is the music volume. The M key and the Sound toggle mute everything. Reduced motion and the effects option don't touch the music.
 
 **Style.** The look follows `docs/krillion-style-guide.md` crossed with Tron: VT323 as the only font, neon on abyss, pixel-bevel box-shadows with no border-radius, and a dark void scene with tier-tinted grids. Tier colours are defined once as `--t0` to `--t6` in `src/styles.css`. `readTierColors()` copies them into `TIERS[].color` at startup for canvas and JS use, so change a tier colour in CSS only. Use the guide for techniques only, never Krillion's assets, names or copy.
 
