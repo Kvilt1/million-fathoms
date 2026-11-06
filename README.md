@@ -16,7 +16,7 @@ Built with React, TypeScript and Vite, bundled into a single HTML file by `vite-
 
 - `src/game/rules.js`: the 233 badge rules (plain JS, unchanged from the verified original)
 - `src/game/score.ts`: scoring, tiers, depth and the score distribution
-- `src/game/controller.ts`: the roll loop, the badge-by-badge reveal, saving and auto-roll
+- `src/game/controller.ts`: the roll loop, the badge-by-badge reveal, and saving
 - `src/game/timing.ts`: every roll and reveal timing, in one place to tune
 - `src/game/highlights.ts`: which digits light up for each badge during the reveal (separate from the rules, so scoring can't change)
 - `src/game/glyphs.ts`: the 8x8 pixel glyph beside each badge, and which glyph each badge gets

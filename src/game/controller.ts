@@ -1,4 +1,4 @@
-/* The game loop: rolls, reveal, saving and auto-roll. React renders from `V` and `S` and
+/* The game loop: rolls, reveal and saving. React renders from `V` and `S` and
    re-renders whenever `emit()` runs; the 60 fps parts (reels, scene, particles, EP counter) are
    driven directly here. Moved from the original app.js with the same timings. */
 import { useSyncExternalStore } from 'react';
@@ -12,7 +12,7 @@ import { createSound } from '../engine/sound';
 import { createScene, type Scene } from '../engine/scene';
 import { createFX, type FX } from '../engine/fx';
 import { createReels, type Reels } from '../engine/reels';
-import { REELS, TENSE, REVEAL, badgeMs } from './timing';
+import { REELS, TENSE, REVEAL, badgeMs, type RunSpeed } from './timing';
 import { highlight, type HLStyle } from './highlights';
 
 export const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -30,7 +30,7 @@ export interface View {
   haulTitle: string; haulCount: string;
   haul: null | { rows: HaulRow[]; outranked: Badge[] };
   stamp: { text: string; mythic: boolean; hit: number };
-  meta: MetaView; now: NowView | null; rollLabel: string; auto: boolean;
+  meta: MetaView; now: NowView | null; rollLabel: string;
   drawer: { open: boolean; tab: Tab; checkN: number | null };
   finish: FinishView | null;
   toasts: { id: number; text: string }[];
@@ -38,7 +38,7 @@ export interface View {
 }
 export const V: View = {
   haulTitle: 'Depth chart', haulCount: 'EP needed', haul: null, stamp: { text: '', mythic: false, hit: 0 },
-  meta: { text: '0 to 1,000,000. Every roll counts.' }, now: null, rollLabel: 'Roll', auto: false,
+  meta: { text: '0 to 1,000,000. Every roll counts.' }, now: null, rollLabel: 'Roll',
   drawer: { open: false, tab: 'log', checkN: null }, finish: null, toasts: [], live: '',
 };
 let version = 0;
@@ -53,7 +53,7 @@ export const Sound = createSound(() => S.opts);
 let Scene: Scene, FXs: FX, Reel: Reels;
 
 /* ---------- Game state ---------- */
-export const G = { busy: false, skip: false, auto: false, preview: false, wake: null as null | (() => void), lastResult: null as Result | null };
+export const G = { busy: false, skip: false, preview: false, wake: null as null | (() => void), lastResult: null as Result | null };
 const $ = (id: string) => document.getElementById(id)!;
 function setTier(color: string) { document.documentElement.style.setProperty('--tier', color); }
 function shake(amp: number, ms = 420) {
@@ -109,7 +109,7 @@ export function toast(text: string) {
   V.toasts = [...V.toasts.slice(-2), { id, text }];
   setTimeout(() => { V.toasts = V.toasts.filter(t => t.id !== id); emit(); }, 3000);
 }
-function celebrate(r: Result, speed: Speed) {
+function celebrate(r: Result, speed: RunSpeed) {
   if (speed === 'instant' && r.tier < 4) return;
   const reel = $('reels').getBoundingClientRect(), x = reel.left + reel.width / 2, y = reel.top + reel.height / 2, color = TIERS[r.tier].color;
   if (r.tier >= 3) { FXs.burst(x, y, color, 30 + r.tier * 26, 4 + r.tier * 1.5); shake(1.5 + (r.tier - 2) * 2.2, 300 + r.tier * 60); }
@@ -137,7 +137,7 @@ export function closeFinish() { V.finish = null; emit(); const f = finishDone; f
 export async function play(n: number, { preview = false } = {}) {
   if (G.busy) return;
   G.busy = true; G.skip = false; G.preview = preview; Sound.init();
-  const speed: Speed = document.hidden ? 'instant' : S.opts.speed, cfg = REELS[speed], r = scoreRoll(n);
+  const speed: RunSpeed = document.hidden ? 'instant' : S.opts.speed, cfg = REELS[speed], r = scoreRoll(n);
   V.rollLabel = speed === 'instant' ? 'Roll' : 'Skip';
   setTier('var(--foam)'); Reel.tint('var(--cyan)'); Scene.tierNow = 0;
   V.haulTitle = preview ? 'Replay' : `Roll ${fmt(S.rolls + 1)}`; V.haulCount = '';
@@ -170,12 +170,7 @@ export async function play(n: number, { preview = false } = {}) {
   G.busy = false;
   emit();
 
-  if (r.tier === 6 && speed !== 'instant' && !G.auto && !preview) await mythicCard(r);
-  if (G.auto) {
-    if (shouldStop(r, info)) { setAuto(false); toast('Auto stopped'); emit(); return; }
-    await new Promise(res => setTimeout(res, document.hidden ? 40 : cfg.hold));
-    if (G.auto) rollNext();
-  }
+  if (r.tier === 6 && speed !== 'instant' && !preview) await mythicCard(r);
 }
 /* The slow reveal: one badge at a time, cheapest first, each lighting the digits that earned it and
    adding its EP to the running total. Outranked badges get one dimmed line at the end. Skip ends it. */
@@ -208,11 +203,6 @@ async function reveal(r: Result, speed: 'show' | 'fast', preview: boolean) {
     await wait(R.outranked);
   }
 }
-function shouldStop(r: Result, info: Info) {
-  const v = S.opts.autoStop;
-  if (v === 'new') return info.fresh.size > 0;
-  return r.tier >= +v;
-}
 function flashZone(t: number) {
   const z = $('zoneFlash'); z.textContent = TIERS[t].zone; z.style.setProperty('--c', TIERS[t].color); retrigger(z, 'go');
 }
@@ -220,10 +210,6 @@ export function rollNext() {
   if (G.busy) { G.skip = true; if (G.wake) G.wake(); return; }
   if (V.finish || V.drawer.open) return;
   play(randomRoll());
-}
-export function setAuto(on: boolean) {
-  G.auto = on; V.auto = on; emit();
-  if (on && !G.busy) rollNext();
 }
 
 /* ---------- Drawer and settings ---------- */
@@ -233,7 +219,6 @@ export function setTab(tab: Tab, checkN?: number) { V.drawer = { ...V.drawer, ta
 export function setCheck(n: number | null) { V.drawer = { ...V.drawer, checkN: n }; emit(); }
 export function watch(n: number) { closeDrawer(); setTimeout(() => play(n, { preview: true }), 120); }
 export function setSpeed(v: Speed) { S.opts.speed = v; save(); emit(); }
-export function setAutoStop(v: string) { S.opts.autoStop = v; save(); emit(); }
 export function toggleSound() { Sound.init(); S.opts.sound = !S.opts.sound; Sound.setVolume(); save(); emit(); }
 export function setOpt<K extends 'sound' | 'vol' | 'ambient' | 'effects'>(k: K, v: SaveState['opts'][K]) {
   S.opts[k] = v; Sound.init();
@@ -256,10 +241,9 @@ function onKeyDown(e: KeyboardEvent) {
   if (e.key === ' ' || e.key === 'Enter') {
     if (target.tagName === 'BUTTON' && target.id !== 'btnRoll' && e.key === 'Enter') return;
     e.preventDefault(); $('btnRoll').classList.add('down'); Sound.init(); rollNext();
-  } else if (e.key === 'a' || e.key === 'A') { Sound.init(); setAuto(!G.auto); }
-  else if (e.key === 'm' || e.key === 'M') { $('btnSound').click(); }
+  } else if (e.key === 'm' || e.key === 'M') { $('btnSound').click(); }
   else if (e.key === 'b' || e.key === 'B') { openDrawer('codex'); }
-  else if (e.key >= '1' && e.key <= '3') { setSpeed((['show', 'fast', 'instant'] as const)[+e.key - 1]); }
+  else if (e.key >= '1' && e.key <= '2') { setSpeed((['show', 'fast'] as const)[+e.key - 1]); }
 }
 function onKeyUp(e: KeyboardEvent) {
   const target = e.target as HTMLElement;

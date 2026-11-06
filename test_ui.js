@@ -105,22 +105,8 @@ const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (
   const perFast = (Date.now() - tf) / 12;
   console.log('fast rolls', await p.evaluate(() => MF.state.rolls), `${perFast.toFixed(0)} ms each`); const base = await p.evaluate(() => MF.state.rolls);
   expect(perFast < 3000, `Fast speed stays quick (${perFast.toFixed(0)} ms a roll including checks)`);
-  // instant auto
-  await p.click('[data-speed=instant]'); await p.selectOption('#autoStop', '9');
-  const t0 = Date.now(); await p.click('#btnAuto');
-  let sawNow = false; for (let i = 0; i < 20; i++) { await p.waitForTimeout(200); sawNow ||= await p.evaluate(() => !!document.getElementById('now') || !!document.querySelector('.reel.lit')); }
-  await p.click('#btnAuto');
-  expect(!sawNow, 'Instant has no reveal');
-  await p.waitForFunction(() => !MF.game.busy); await p.waitForTimeout(150);
-  const s = await p.evaluate(() => ({ rolls: MF.state.rolls, badges: Object.keys(MF.state.badges).length, tiers: MF.state.tiers, logLen: MF.state.log.length }));
-  const rate = (s.rolls - base) / ((Date.now() - t0) / 1000);
-  console.log('auto', s, 'rolls/sec', rate.toFixed(1));
-  expect(rate > 10, `Instant auto-roll runs (${rate.toFixed(1)} rolls/sec)`);
-  // auto stops on its condition
-  await p.selectOption('#autoStop', '3'); await p.click('#btnAuto');
-  await p.waitForFunction(() => !MF.game.auto, null, { timeout: 30000 }); await p.waitForFunction(() => !MF.game.busy);
-  const stopped = await p.evaluate(() => MF.game.lastResult.tier);
-  expect(stopped >= 3, `auto stops at Rare or better (stopped on tier ${stopped})`);
+  // only Normal and Fast remain: no Instant speed, no Auto
+  expect((await p.$$('[data-speed]')).length === 2 && !(await p.$('#btnAuto')) && !(await p.$('#autoStop')), 'speed menu is Normal and Fast, with no Auto');
   // drawers
   for (const t of ['log', 'codex', 'sets', 'check', 'how', 'settings']) {
     await p.click(`[data-open=${t}]`); await p.waitForTimeout(350);
@@ -177,9 +163,6 @@ const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (
   const calm = await r.evaluate(() => ({ shake: document.getElementById('app').classList.contains('shake'), dur: getComputedStyle(document.getElementById('stamp')).animationDuration, scan: getComputedStyle(document.querySelector('.machine'), '::after').display }));
   expect(!calm.shake && parseFloat(calm.dur) < .001, `reduced motion: no shake, animations off (${calm.dur})`);
   expect(calm.scan === 'none', 'reduced motion: no scan line on the reels');
-  await r.evaluate(() => document.getElementById('btnAuto').setAttribute('aria-pressed', 'true'));
-  const pulse = await r.evaluate(() => getComputedStyle(document.getElementById('btnAuto')).animationIterationCount);
-  expect(pulse === '1', `reduced motion: no glow pulse on Auto (${pulse})`);
   const still = await r.evaluate(async () => {
     const c = document.getElementById('scene'), a = c.toDataURL();
     await new Promise(res => setTimeout(res, 700));

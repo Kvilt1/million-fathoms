@@ -2,15 +2,14 @@ import { useEffect, useRef } from 'react';
 import { compact, fmt, pctText } from '../game/score';
 import { setsComplete } from '../game/sets';
 import {
-  useGame, start, rollNext, setAuto, setSpeed, setAutoStop, openDrawer, toggleSound, Sound, G,
+  useGame, start, rollNext, setSpeed, openDrawer, toggleSound, Sound,
 } from '../game/controller';
 import type { Speed } from '../game/save';
 import { Row, Outranked, Ladder, Now } from './parts';
 import { Drawer } from './Drawer';
 import { Finish } from './Finish';
 
-const SPEEDS: [Speed, string][] = [['show', 'Show'], ['fast', 'Fast'], ['instant', 'Instant']];
-const AUTO_STOPS: [string, string][] = [['9', 'never'], ['3', 'Rare'], ['4', 'Epic'], ['5', 'Anomaly'], ['6', 'Mythic'], ['new', 'a new badge']];
+const SPEEDS: [Speed, string][] = [['show', 'Normal'], ['fast', 'Fast']];
 
 export function App() {
   const { V, S } = useGame();
@@ -62,12 +61,6 @@ export function App() {
               <div className="seg" role="group" aria-label="Speed">
                 {SPEEDS.map(([k, l]) => <button key={k} data-speed={k} aria-pressed={S.opts.speed === k} onClick={ui(() => setSpeed(k))}>{l}</button>)}
               </div>
-              <button className="auto" id="btnAuto" aria-pressed={V.auto} onClick={ui(() => setAuto(!G.auto))}>Auto</button>
-              <label><span className="lbl">stop at</span>
-                <select id="autoStop" aria-label="Stop auto rolling at" value={S.opts.autoStop} onChange={e => setAutoStop(e.target.value)}>
-                  {AUTO_STOPS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-              </label>
             </div>
           </div>
         </section>
@@ -83,7 +76,7 @@ export function App() {
 
         <nav className="dock" aria-label="Sections">
           {([['log', 'Log'], ['codex', 'Badges'], ['sets', 'Sets'], ['check', 'Check'], ['how', 'How'], ['settings', 'Settings']] as const).map(([k, l]) => (
-            <button key={k} data-open={k} onClick={() => { Sound.init(); setAuto(false); openDrawer(k); }}>
+            <button key={k} data-open={k} onClick={() => { Sound.init(); openDrawer(k); }}>
               {l}
               {k === 'codex' && <em id="dockBadges">{found}/233</em>}
               {k === 'sets' && <em id="dockSets">{setsComplete(S)}/16</em>}

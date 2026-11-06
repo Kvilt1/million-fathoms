@@ -1,11 +1,14 @@
 /* Every roll timing in one place. Times are in milliseconds. Tune here; nothing else hard-codes them. */
 import type { Speed } from './save';
 
-/** Reels: how long they spin, the gap between reels stopping, and the pause before auto-roll's next roll. */
-export const REELS: Record<Speed, { spin: number; stagger: number; hold: number }> = {
-  show: { spin: 620, stagger: 150, hold: 500 },
-  fast: { spin: 170, stagger: 34, hold: 170 },
-  instant: { spin: 0, stagger: 0, hold: 50 },
+/** Instant is never chosen from the menu; a hidden tab uses it so rolls don't wait on animations. */
+export type RunSpeed = Speed | 'instant';
+
+/** Reels: how long they spin and the gap between reels stopping. */
+export const REELS: Record<RunSpeed, { spin: number; stagger: number }> = {
+  show: { spin: 620, stagger: 150 },
+  fast: { spin: 170, stagger: 34 },
+  instant: { spin: 0, stagger: 0 },
 };
 /** Suspense on the last reel at Show speed, by the roll's final tier (Trash to Mythic). */
 export const TENSE = [0, 0, 0, 0, 500, 1300, 2200];

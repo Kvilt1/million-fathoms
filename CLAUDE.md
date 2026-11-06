@@ -34,13 +34,13 @@ SHOTS=shots npm run test:ui       # Playwright playthrough of the BUILT file (bu
 - `src/game/highlights.ts` decides which reel digits light up for each badge during the reveal. It's separate from the rules on purpose, so highlights can't affect scoring. Every badge needs an entry in `HIGHLIGHTS`, and `test:highlights` enforces that.
 
 **State and rendering.** `src/game/controller.ts` is the game loop and holds all mutable state. React doesn't own the game state:
-- `S` is the saved state (`save.ts`, localStorage key `million-fathoms-v1`, kept compatible with the original save shape). `V` is the view model React renders. `G` holds runtime flags (busy, skip, auto).
+- `S` is the saved state (`save.ts`, localStorage key `million-fathoms-v1`, kept compatible with the original save shape). `V` is the view model React renders. `G` holds runtime flags (busy, skip, preview).
 - To change the UI, mutate `V`/`S`, then call `emit()`. Components subscribe through `useGame()` (`useSyncExternalStore` on a version counter).
 - The 60 fps parts skip React. The controller drives them imperatively: the canvas scene (`engine/scene.ts`), the particle canvas (`engine/fx.ts`), the reels (`engine/reels.ts`, which builds its own DOM inside a box React provides), and the EP counter (written straight to `#ep`). The controller also sets the CSS variable `--tier` and adds classes such as `shake` directly.
-- `start()` (called once from `App`) creates the engines. `play(n)` runs a roll: spin the reels, reveal badges one at a time (Show/Fast speeds), then record, celebrate and notify. Auto-roll sits on top of `rollNext()`.
+- `start()` (called once from `App`) creates the engines. `play(n)` runs a roll: spin the reels, reveal badges one at a time (Show/Fast speeds), then record, celebrate and notify. The menu offers only Normal (`show`) and Fast; there is no Auto or Instant. `RunSpeed` adds an internal `instant` that a hidden tab uses.
 - `window.MF` exposes `play`, `scoreRoll`, `Sound`, `highlight`, `badgeMs`, `state` and `game`. `test_ui.js` depends on it, so keep it working.
 
-**Timing.** Every roll and reveal duration lives in `src/game/timing.ts`, keyed by speed (`show` / `fast` / `instant`) and tier. Tune timing there, and don't hard-code durations elsewhere. `test_ui.js` checks some reveal timing.
+**Timing.** Every roll and reveal duration lives in `src/game/timing.ts`, keyed by speed (`show` / `fast`, plus the internal `instant`) and tier. Tune timing there, and don't hard-code durations elsewhere. `test_ui.js` checks some reveal timing.
 
 **Sound.** `engine/sound.ts` synthesises everything live with Web Audio and ships no audio files. It uses sine and triangle tones, filtered noise sweeps, and notes from C and G major. Downward glides mean deeper, upward glides mean success. The AudioContext starts lazily on a user gesture (`Sound.init()`).
 

@@ -182,7 +182,7 @@ function PaneSettings({ confirm, setConfirm }: { confirm: boolean; setConfirm: (
       <label>Volume <input type="range" id="oVol" min="0" max="1" step=".05" value={o.vol} onChange={e => setOpt('vol', +e.target.value)} onPointerUp={() => Sound.ping(4, 1)} onKeyUp={() => Sound.ping(4, 1)} /></label>
       <label>Ambient hum <input type="checkbox" id="oAmb" checked={o.ambient} onChange={e => setOpt('ambient', e.target.checked)} /></label>
       <label>Screen shake and particles <input type="checkbox" id="oFx" checked={o.effects} onChange={e => setOpt('effects', e.target.checked)} /></label>
-      <p style={{ margin: '6px 0 0' }}>Keys: Space or Enter rolls and skips, A toggles auto, 1, 2 and 3 set speed, M mutes, B opens badges, Esc closes this panel.</p>
+      <p style={{ margin: '6px 0 0' }}>Keys: Space or Enter rolls and skips, 1 and 2 set speed, M mutes, B opens badges, Esc closes this panel.</p>
       <p style={{ margin: 0 }}>Your progress is saved in this browser only. {S.rolls ? `It holds ${fmt(S.rolls)} rolls.` : ''}</p>
       <div id="resetBox">
         {confirm

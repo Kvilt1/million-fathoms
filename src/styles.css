@@ -77,14 +77,14 @@ canvas#fx { pointer-events: none; z-index: 40; }
 /* ---------- Top bar ---------- */
 .top { grid-area: top; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; min-width: 0; }
 .brand { font-size: clamp(30px, 3.4vw, 40px); line-height: .9; letter-spacing: .06em; text-transform: uppercase; color: var(--foam); text-shadow: -3px 2px var(--pink), 3px -2px #4de3ffd9, 0 0 16px #4de3ff4d; white-space: nowrap; padding-top: 3px; }
-.dock button, .tabs button, .chip, .seg button, .auto {
+.dock button, .tabs button, .chip, .seg button {
   padding: 5px 12px 3px; text-transform: uppercase; letter-spacing: .12em; color: var(--drift);
   background: var(--panel-deep); box-shadow: var(--bevel); white-space: nowrap;
   transition: transform 80ms steps(2, end), color .15s, box-shadow .15s;
 }
-.dock button:hover, .tabs button:hover, .chip:hover, .seg button:hover, .auto:hover { color: var(--foam); box-shadow: var(--bevel-hover); }
+.dock button:hover, .tabs button:hover, .chip:hover, .seg button:hover { color: var(--foam); box-shadow: var(--bevel-hover); }
 .tabs button[aria-selected="true"], .seg button[aria-pressed="true"] { color: var(--foam); background: var(--shallow); box-shadow: var(--bevel-on); }
-.dock button:active, .tabs button:active, .chip:active, .seg button:active, .auto:active { transform: translateY(2px); }
+.dock button:active, .tabs button:active, .chip:active, .seg button:active { transform: translateY(2px); }
 .stats { margin-left: auto; display: flex; gap: 8px; align-items: stretch; }
 .stat { display: flex; flex-direction: column-reverse; align-items: flex-end; justify-content: flex-end; gap: 2px; min-width: 76px; padding: 6px 12px 4px; background: linear-gradient(#101d33eb, #0b1526eb); box-shadow: var(--pod); }
 .stat b { font-size: 25px; line-height: 1; color: var(--cyan); text-shadow: 0 0 12px #4de3ff8c; }
@@ -189,9 +189,6 @@ canvas#fx { pointer-events: none; z-index: 40; }
 .tools label { display: inline-flex; align-items: center; gap: 8px; }
 .seg { display: inline-flex; gap: 8px; padding: 0 4px; }
 .seg button { padding: 4px 10px 2px; }
-.auto { padding: 4px 12px 2px; }
-.auto[aria-pressed="true"] { color: var(--abyss); background: var(--pink); box-shadow: 0 0 0 2px var(--abyss), 0 3px 0 2px var(--pink-lip), 0 0 16px #ff5d8f73; animation: hot 1s var(--ease-io) infinite alternate; }
-@keyframes hot { to { box-shadow: 0 0 0 2px var(--abyss), 0 3px 0 2px var(--pink-lip), 0 0 30px #ff5d8fcc; } }
 select { background: #0b1526e6; border: 2px solid var(--ring); padding: 2px 8px 0; color: var(--foam); text-transform: uppercase; letter-spacing: .1em; }
 select:focus-visible { border-color: #4de3ffa6; outline: 0; }
 
@@ -373,7 +370,6 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 22px; border: 0; bord
   .tools { flex-wrap: nowrap; font-size: 15px; gap: 8px; max-width: 100%; letter-spacing: .06em; }
   .seg { gap: 6px; padding: 0 2px; }
   .seg button { padding: 3px 6px 1px; }
-  .auto { padding: 3px 8px 1px; }
   select { padding: 1px 4px 0; letter-spacing: .04em; }
   .haul { margin: 4px 4px 8px; }
   .haul header { padding: 8px 6px 5px; margin: 0 10px; }
