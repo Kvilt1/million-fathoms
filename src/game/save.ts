@@ -1,7 +1,8 @@
 /* Saved progress. Same key and shape as the original, so existing saves carry over. */
 export const SAVE_KEY = 'million-fathoms-v1';
 export type Speed = 'show' | 'fast';
-export interface Opts { sound: boolean; vol: number; ambient: boolean; speed: Speed; effects: boolean }
+/** `ambient` is the Music switch (kept under its old name so saves carry over). */
+export interface Opts { sound: boolean; vol: number; ambient: boolean; musicVol: number; speed: Speed; effects: boolean }
 export interface LogEntry { n: number; t: number; k: number; f: number }
 export interface SaveState {
   rolls: number; life: number; best: { n: number; total: number; tier: number } | null; tiers: number[];
@@ -9,7 +10,7 @@ export interface SaveState {
 }
 export const fresh = (): SaveState => ({
   rolls: 0, life: 0, best: null, tiers: [0, 0, 0, 0, 0, 0, 0], badges: {}, sets: {}, log: [],
-  opts: { sound: true, vol: .7, ambient: true, speed: 'show', effects: true },
+  opts: { sound: true, vol: .7, ambient: true, musicVol: .6, speed: 'show', effects: true },
 });
 export function load(): SaveState {
   try {
