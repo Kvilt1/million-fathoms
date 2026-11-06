@@ -49,7 +49,7 @@ const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f
 export function useGame() { useSyncExternalStore(subscribe, () => version); return { V, S }; }
 
 /* ---------- Engines ---------- */
-export const Sound = createSound(() => S.opts);
+export const Sound = createSound(() => S.opts, () => S.best?.tier ?? 0);
 let Scene: Scene, FXs: FX, Reel: Reels;
 
 /* ---------- Game state ---------- */
@@ -129,9 +129,9 @@ function notify(r: Result, info: Info) {
 }
 let finishDone: null | (() => void) = null;
 function mythicCard(r: Result) {
-  return new Promise<void>(res => { finishDone = res; V.finish = { r }; emit(); });
+  return new Promise<void>(res => { finishDone = res; V.finish = { r }; Sound.music?.cue({ type: 'finish', open: true }); emit(); });
 }
-export function closeFinish() { V.finish = null; emit(); const f = finishDone; finishDone = null; f?.(); }
+export function closeFinish() { V.finish = null; Sound.music?.cue({ type: 'finish', open: false }); emit(); const f = finishDone; finishDone = null; f?.(); }
 
 /* ---------- The roll ---------- */
 export async function play(n: number, { preview = false } = {}) {
@@ -152,6 +152,7 @@ export async function play(n: number, { preview = false } = {}) {
     V.haul = { rows: [], outranked: [] }; tweenEP(0, 0); V.meta = { text: 'Sounding...' }; emit();
     Scene.sink(0, speed === 'show' ? 7 : 16);
     if (speed === 'show') Sound.press();
+    Sound.music?.cue({ type: 'press', speed });
     const tense = speed === 'show' ? TENSE[r.tier] : 0;
     await Reel.spin(n, { spinMs: cfg.spin, stagger: cfg.stagger, tense, skip: () => G.skip });
     Scene.sink(.05, 6); if (speed === 'show' && !G.skip) Sound.plunge();
@@ -161,6 +162,10 @@ export async function play(n: number, { preview = false } = {}) {
   }
 
   const info: Info = preview ? { fresh: new Set(), doneSets: [], best: false, firstTier: false } : record(r);
+  if (speed !== 'instant') {
+    Sound.music?.cue({ type: 'result', tier: r.tier, u: r.u, best: info.best, fresh: info.fresh.size, sets: info.doneSets.length, firstTier: info.firstTier, speed, preview });
+    if (info.best) Sound.music?.cue({ type: 'unlocks', bestTier: S.best!.tier });
+  }
   V.haul = { rows: rows(byEpDesc(r), b => info.fresh.has(b.name), false), outranked: r.outranked };
   Scene.sink(r.u, speed === 'instant' ? 30 : 5);
   tweenEP(r.total, speed === 'instant' || G.skip ? 0 : 120);
@@ -186,13 +191,13 @@ async function reveal(r: Result, speed: 'show' | 'fast', preview: boolean) {
     V.now = { key: ++nowKey, b, isNew, style: hl.style };
     V.haul = { rows: [...rows([b], () => isNew, true), ...V.haul!.rows], outranked: [] }; emit();
     const at = Reel.highlight(r.n, hl, color);
-    if (show) Sound.ping(i, b.tier); else if (i % 2 === 0) Sound.blip(b.tier);
+    if (show) Sound.ping(i, b.tier, zoneOf(running)); else if (i % 2 === 0) Sound.blip(b.tier);
     Scene.sink(zoneOf(running), show ? 4 + b.tier : 12);
     tweenEP(running, R.count);
     const t = tierOf(running);
     if (t > tierNow) {
       tierNow = t; setTier(TIERS[t].color); Reel.tint(TIERS[t].color); Scene.tierNow = t;
-      if (t >= 2 && show) { Scene.ping(); Sound.sonar(zoneOf(running)); flashZone(t); }
+      if (t >= 2 && show) { Scene.ping(); Sound.sonar(zoneOf(running), t); flashZone(t); }
     }
     if (show && b.tier >= 2) { FXs.burst(at.x, at.y, color, 8 + b.tier * 6, 2 + b.tier); shake(b.tier * 1.1, 200); }
     i++;
@@ -207,27 +212,28 @@ function flashZone(t: number) {
   const z = $('zoneFlash'); z.textContent = TIERS[t].zone; z.style.setProperty('--c', TIERS[t].color); retrigger(z, 'go');
 }
 export function rollNext() {
-  if (G.busy) { G.skip = true; if (G.wake) G.wake(); return; }
+  if (G.busy) { if (!G.skip) Sound.music?.cue({ type: 'skip' }); G.skip = true; if (G.wake) G.wake(); return; }
   if (V.finish || V.drawer.open) return;
   play(randomRoll());
 }
 
 /* ---------- Drawer and settings ---------- */
-export function openDrawer(tab: Tab) { V.drawer = { ...V.drawer, open: true, tab }; Sound.ui(); emit(); }
-export function closeDrawer() { V.drawer = { ...V.drawer, open: false }; Sound.ui(); emit(); }
+export function openDrawer(tab: Tab) { V.drawer = { ...V.drawer, open: true, tab }; Sound.ui(); Sound.music?.cue({ type: 'drawer', open: true }); emit(); }
+export function closeDrawer() { V.drawer = { ...V.drawer, open: false }; Sound.ui(); Sound.music?.cue({ type: 'drawer', open: false }); emit(); }
 export function setTab(tab: Tab, checkN?: number) { V.drawer = { ...V.drawer, tab, checkN: checkN ?? V.drawer.checkN }; emit(); }
 export function setCheck(n: number | null) { V.drawer = { ...V.drawer, checkN: n }; emit(); }
 export function watch(n: number) { closeDrawer(); setTimeout(() => play(n, { preview: true }), 120); }
 export function setSpeed(v: Speed) { S.opts.speed = v; save(); emit(); }
 export function toggleSound() { Sound.init(); S.opts.sound = !S.opts.sound; Sound.setVolume(); save(); emit(); }
-export function setOpt<K extends 'sound' | 'vol' | 'ambient' | 'effects'>(k: K, v: SaveState['opts'][K]) {
+export function setOpt<K extends 'sound' | 'vol' | 'ambient' | 'musicVol' | 'effects'>(k: K, v: SaveState['opts'][K]) {
   S.opts[k] = v; Sound.init();
-  if (k === 'sound' || k === 'vol') Sound.setVolume();
+  if (k === 'sound' || k === 'vol' || k === 'musicVol') Sound.setVolume();
   if (k === 'ambient') Sound.ambient();
   save(); emit();
 }
 export function wipe() {
   const opts = S.opts; S = fresh(); S.opts = opts; save(); Scene.setBest(null); Scene.sink(0, 5);
+  Sound.music?.cue({ type: 'reset' }); Sound.music?.cue({ type: 'unlocks', bestTier: 0 });
   Reel.setNow(0); tweenEP(0, 0); V.now = null; V.stamp = { text: '', mythic: false, hit: 0 }; V.meta = { text: 'Progress erased. Ready to dive.' }; idleHaul(); emit();
 }
 
@@ -259,6 +265,8 @@ export function start(els: { scene: HTMLCanvasElement; fx: HTMLCanvasElement; re
   Reel = createReels(els.reels, Sound, reduced);
   addEventListener('keydown', onKeyDown);
   addEventListener('keyup', onKeyUp);
+  // Background tabs throttle timers, so the music fades out and its clock stops while the page is hidden.
+  document.addEventListener('visibilitychange', () => Sound.visibility());
   const boot = () => {
     Reel.measure(); refreshStats(); Scene.start();
     const last = S.log[0];
@@ -268,6 +276,7 @@ export function start(els: { scene: HTMLCanvasElement; fx: HTMLCanvasElement; re
       V.haulTitle = 'Last roll';
       V.haul = { rows: rows(byEpDesc(r), () => false, false), outranked: r.outranked };
     } else { Reel.setNow(0); Reel.allOff(); setEP(0); idleHaul(); }
+    Sound.music?.cue({ type: 'unlocks', bestTier: S.best?.tier ?? 0 });
     emit();
   };
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(boot); else boot();
