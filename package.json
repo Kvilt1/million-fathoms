@@ -9,7 +9,8 @@
     "test:rules": "tsx tests/rules_snapshot.ts",
     "test:ui": "node test_ui.js",
     "test:highlights": "tsx tests/highlights_test.ts",
-    "test:glyphs": "tsx tests/glyphs_test.ts"
+    "test:glyphs": "tsx tests/glyphs_test.ts",
+    "test:music": "tsx tests/music_test.ts"
   },
   "dependencies": {
     "react": "^19.3.1",
