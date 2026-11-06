@@ -90,7 +90,7 @@ export type Layer = 'pad' | 'drone' | 'arp' | 'bass' | 'lead' | 'kick' | 'clank'
 export const LAYERS: Layer[] = ['pad', 'drone', 'arp', 'bass', 'lead', 'kick', 'clank', 'hats', 'clap', 'hadal'];
 /** Per-note peak gains (Strudel's values, treated as relative levels). */
 export const GAIN = {
-  pad: .09, drone: .22, arp: .22, arpGhost: .08, bass: .38, lead: .11, kick: .34, clank: .16,
+  pad: .045, drone: .22, arp: .22, arpGhost: .08, bass: .38, lead: .11, kick: .34, clank: .16,
   hats: .16, ghostLo: .02, ghostHi: .08, hatFill: .1, clap: .2, riser: .1, hadal: .05, crash: .12, stab: .12,
 };
 /** Mix trims in dB over GAIN, measured on the real output so each part sits where the 3a draft has it:
