@@ -8,7 +8,7 @@ Unofficial fan game based on RNGdle's scoring. It has no connection to RNGdle.
 
 **Play offline:** open `dist/million-fathoms.html` in any browser. It's one self-contained file with no network requests.
 
-Every push to `main` rebuilds the game and publishes it to GitHub Pages (`.github/workflows/pages.yml`).
+Every push to `main` rebuilds the game and publishes it to GitHub Pages (`.github/workflows/pages.yml`). The `test` branch is published alongside it at https://kvilt1.github.io/million-fathoms/test/ so changes can be tried before they're merged: merge a branch into `test`, push, and the site updates once the `Test branch` check passes.
 
 ## Layout
 

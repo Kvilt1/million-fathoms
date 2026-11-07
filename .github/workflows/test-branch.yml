@@ -1,0 +1,24 @@
+# Checks the test branch on every push: it must build, and Descent's tests must pass where they exist.
+# When this passes, Pages (pages.yml, run from main) republishes the site with this branch at /test/.
+name: Test branch
+
+on:
+  push:
+    branches: [test]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run --if-present test:descent

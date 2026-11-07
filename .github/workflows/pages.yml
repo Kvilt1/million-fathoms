@@ -1,10 +1,18 @@
-# Builds the single-file game and publishes it to GitHub Pages on every push to main.
-# Only the built file is published: as index.html, and under its own name for old links.
+# Builds the game and publishes it to GitHub Pages.
+#   main  -> the live site:   https://kvilt1.github.io/million-fathoms/
+#   test  -> the test build:  https://kvilt1.github.io/million-fathoms/test/
+# A push to main runs this directly. A push to test runs "Test branch" (test-branch.yml) first; when that
+# passes, this runs from main (workflow_run always uses the default branch, which is the branch the
+# github-pages environment lets deploy). Every run rebuilds both branches, so neither overwrites the other.
 name: Pages
 
 on:
   push:
     branches: [main]
+  workflow_run:
+    workflows: [Test branch]
+    types: [completed]
+    branches: [test]
   workflow_dispatch:
 
 permissions:
@@ -18,19 +26,43 @@ concurrency:
 
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: main
+          path: main
+      - name: Check out the test branch, if there is one
+        id: test
+        run: |
+          if git -C main ls-remote --exit-code --heads origin test > /dev/null; then
+            git -C main fetch --depth 1 origin test
+            git -C main worktree add ../test FETCH_HEAD
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
-      - run: npm run build
-      - run: |
+          cache-dependency-path: '*/package-lock.json'
+      - name: Build main
+        working-directory: main
+        run: npm ci && npm run build
+      - name: Build test
+        if: steps.test.outputs.present == 'true'
+        working-directory: test
+        run: npm ci && npm run build
+      - name: Assemble the site
+        run: |
           mkdir _site
-          cp dist/million-fathoms.html _site/index.html
-          cp dist/million-fathoms.html _site/million-fathoms.html
+          cp main/dist/million-fathoms.html _site/index.html
+          cp main/dist/million-fathoms.html _site/million-fathoms.html
+          if [ -d test ]; then
+            mkdir _site/test
+            cp test/dist/million-fathoms.html _site/test/index.html
+          fi
+          ls -R _site
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:

@@ -24,7 +24,7 @@ SHOTS=shots npm run test:ui       # Playwright playthrough of the BUILT file (bu
 - To run part of the UI test, edit `test_ui.js`. It opens `file://dist/million-fathoms.html` with all non-file requests blocked, so it tests whatever was last built.
 - `test_rules.js` and `export_data.py` compare against the Python reference scorer, which isn't in this repo. They won't run here.
 - `dist/million-fathoms.html` is committed (`.gitignore` ignores everything else in `dist/`). Rebuild it whenever you change source.
-- Every push to `main` deploys the build to GitHub Pages through `.github/workflows/pages.yml`.
+- Every push to `main` deploys the build to GitHub Pages through `.github/workflows/pages.yml`. The `test` branch deploys under `/test/` on the same site: a push to `test` runs `.github/workflows/test-branch.yml`, and when it passes `pages.yml` runs from `main` (via `workflow_run`) and rebuilds both branches. Both builds share the site's origin, so they share localStorage saves.
 
 ## Architecture
 
