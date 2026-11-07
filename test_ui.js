@@ -1,5 +1,5 @@
 // Plays the built offline file in a real browser with the network blocked.
-// Run: npm run build && SHOTS=shots node test_ui.js
+// Run: npm run build && SHOTS=shots node test_ui.js  (CHROMIUM=/path/to/chrome to use another browser)
 import { chromium, devices } from 'playwright';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -10,15 +10,15 @@ const fails = [];
 const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (!ok) fails.push(what); };
 
 (async () => {
-  const b = await chromium.launch();
+  const b = await chromium.launch(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {});
   const errors = [], external = [];
-  async function page(opts, seed) {
+  async function page(opts, seed, url = FILE) {
     const ctx = await b.newContext(opts); const p = await ctx.newPage();
     p.on('pageerror', e => errors.push(String(e)));
     p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     await ctx.route('**/*', r => { const u = r.request().url(); if (u.startsWith('file:') || u.startsWith('data:')) return r.continue(); external.push(u); return r.abort(); });
     if (seed) await ctx.addInitScript(s => { if (!sessionStorage.getItem('seeded')) { localStorage.setItem('million-fathoms-v1', s); sessionStorage.setItem('seeded', '1'); } }, seed);
-    await p.goto(FILE); await p.waitForTimeout(700); return p;
+    await p.goto(url); await p.waitForTimeout(700); return p;
   }
   // A roll that ends on a card (Mythic) is closed before carrying on.
   const settle = async p => { await p.waitForFunction(() => !MF.game.busy, null, { timeout: 30000 }); await p.waitForTimeout(150); if (await p.isVisible('#fClose')) await p.click('#fClose'); };
@@ -193,6 +193,99 @@ const expect = (ok, what) => { console.log(ok ? '  ok  ' : '  FAIL', what); if (
   expect(over.sw <= over.cw && over.machine <= over.cw && over.dock <= over.h, 'phone layout fits the screen');
   await m.tap('[data-open=codex]'); await m.waitForTimeout(350); await m.screenshot({ path: `${OUT}/12-phone-codex.png` });
   expect(await m.isVisible('.card'), 'phone: badges panel opens');
+  // ---------- Descent ----------
+  const dp = await page({ viewport: { width: 1360, height: 820 } });
+  const reelCount = q => q.evaluate(() => document.querySelectorAll('.reel').length);
+  const lvlText = q => q.evaluate(() => document.querySelector('#lvl .lvl-text').textContent);
+  // Classic progress, leaving out the settings (speed, sound), which both modes share
+  const classicProgress = q => q.evaluate(() => { const { opts, ...rest } = MF.state; return JSON.stringify(rest); });
+  const classicBefore = await classicProgress(dp);
+  await dp.click('[data-mode=descent]'); await dp.waitForTimeout(200);
+  expect(await dp.evaluate(() => MF.descent.mode) === 'descent' && await reelCount(dp) === 1, 'Descent starts with one reel');
+  const lv0 = await lvlText(dp);
+  expect(lv0 === `Lv 1 · Depth 1 · 0 / ${(await dp.evaluate(() => MF.descent.levels[0].req)).toLocaleString('en-US')} EP`, `level bar reads "${lv0}"`);
+  expect(!(await dp.$('[data-open=log]')) && !(await dp.$('[data-open=levels]')) && await dp.$('[data-open=codex]'), 'Descent dock: no Log, Sets or Check; no Level table without #dev');
+  await dp.screenshot({ path: `${OUT}/d1-idle.png` });
+  await dp.click('[data-speed=fast]');
+  await dp.keyboard.press('Space'); await dp.waitForTimeout(250);
+  await dp.screenshot({ path: `${OUT}/d2-climb.png` });
+  await settle(dp);
+  const d1 = await dp.evaluate(() => ({ d: MF.descent.state, classic: MF.state.rolls, ep: document.getElementById('ep').textContent, n: +[...document.querySelectorAll('.reel .strip')].map(s => Math.round(-parseFloat(s.style.transform.split(',')[1]) / document.querySelector('.reel').offsetHeight) % 10).join('') }));
+  const r1 = await dp.evaluate(n => MF.descent.scoreAt(n, 1), d1.n);
+  expect(d1.d.rolls === 1 && d1.d.xp === r1.total && d1.ep.startsWith(r1.total.toLocaleString('en-US')) && d1.classic === 0, `a Descent roll at depth 1 (${d1.n}: ${r1.total} EP) adds XP, not Classic rolls`);
+  expect((await lvlText(dp)).includes(`${r1.total.toLocaleString('en-US')} / `), 'the level bar fills with the roll\'s EP');
+  // highlights line up with the unpadded string: 42 at depth 3 shows as 042, and the 4 is reel 1
+  await dp.evaluate(() => MF.descent.jump(11)); await dp.waitForTimeout(100);
+  expect(await reelCount(dp) === 3, 'level 11 is depth 3 with three reels');
+  await dp.click('[data-speed=show]');
+  await dp.evaluate(() => { MF.play(42); });
+  await dp.waitForFunction(n => document.querySelector('#now .nm')?.textContent === n, 'Beryllium (4)', { timeout: 20000 });
+  const hl = await dp.evaluate(() => ({ lit: [...document.querySelectorAll('.reel')].flatMap((r, i) => r.classList.contains('lit') ? [i] : []), off: document.querySelector('.reel').classList.contains('off'), ep: document.querySelector('#now .now-ep').textContent }));
+  const be = await dp.evaluate(() => MF.descent.scoreAt(42, 3).paid.find(b => b.name === 'Beryllium (4)').ep);
+  expect(hl.lit.join() === '1' && hl.off && hl.ep === `+${be.toLocaleString('en-US')}`, `depth 3: 042 lights reel ${hl.lit} for Beryllium (4) at its depth-3 EP (${hl.ep}), leading zero dimmed`);
+  await dp.keyboard.press('Space'); await settle(dp);
+  // digit-up: one EP short of level 6, then any roll adds the second reel
+  await dp.evaluate(() => MF.descent.jump(5, MF.descent.levels[4].req - 1)); await dp.waitForTimeout(100);
+  await dp.evaluate(() => { window.__flash = []; new MutationObserver(() => { const z = document.getElementById('zoneFlash'); if (z.classList.contains('go')) window.__flash.push(z.textContent); }).observe(document.getElementById('zoneFlash'), { attributes: true }); });
+  await dp.evaluate(() => { MF.play(3); });
+  await dp.waitForSelector('.reel.enter', { timeout: 20000 });
+  await dp.waitForTimeout(400);
+  await dp.screenshot({ path: `${OUT}/d3-digit-up.png` });
+  await settle(dp);
+  const up = await dp.evaluate(() => ({ s: MF.descent.state, flash: window.__flash, reels: document.querySelectorAll('.reel').length }));
+  expect(up.s.depth === 2 && up.s.level === 6 && up.reels === 2, `digit-up: level 6, depth 2, two reels (${up.s.level}/${up.s.depth}/${up.reels})`);
+  expect(up.flash.includes('Sunlight Zone'), `digit-up flashes the new zone (${up.flash.join(', ')})`);
+  expect((await lvlText(dp)).startsWith('Lv 6 · Depth 2 · '), 'the bar moves on to level 6');
+  // codex at depth 2
+  await dp.click('[data-open=codex]'); await dp.waitForTimeout(300);
+  const cx = await dp.evaluate(() => ({ cards: document.querySelectorAll('.card').length, deeper: document.querySelectorAll('.card.deeper').length, up: document.querySelectorAll('.trend.up').length, down: document.querySelectorAll('.trend.down').length, nw: document.querySelectorAll('.trend.new').length, head: document.getElementById('cDepth').textContent }));
+  const want2 = await dp.evaluate(() => 233 - [...new Set(Object.keys(MF.descent.state.badges))].length >= 0 && document.querySelector('[data-own=deeper]').textContent);
+  await dp.screenshot({ path: `${OUT}/d4-codex.png` });
+  expect(cx.cards === 233 && cx.deeper > 0 && cx.up + cx.down + cx.nw > 0 && cx.head.includes('depth 2') && want2 === `Deeper ${cx.deeper}`, `Descent codex: depth-2 values, ${cx.deeper} deeper, ${cx.up} up, ${cx.down} down, ${cx.nw} new`);
+  await dp.keyboard.press('Escape');
+  // progress survives a reload, in Descent mode
+  await dp.waitForTimeout(400); await dp.reload(); await dp.waitForTimeout(700);
+  expect(await dp.evaluate(() => MF.descent.mode === 'descent' && MF.descent.state.depth === 2) && await reelCount(dp) === 2, 'Descent mode and depth survive a reload');
+  // Reset Descent asks first, then leaves Classic alone
+  await dp.click('[data-open=settings]'); await dp.waitForTimeout(200);
+  await dp.click('#dReset'); expect(await dp.isVisible('#dWipe') && await dp.evaluate(() => MF.descent.state.depth === 2), 'Reset Descent asks before erasing');
+  await dp.click('#dWipe'); await dp.waitForTimeout(150); await dp.keyboard.press('Escape');
+  const wiped = await dp.evaluate(() => ({ d: MF.descent.state }));
+  wiped.classic = await classicProgress(dp);
+  expect(wiped.d.level === 1 && wiped.d.xp === 0 && wiped.d.rolls === 0 && await reelCount(dp) === 1, 'Reset Descent: back to one reel at level 1');
+  expect(wiped.classic === classicBefore && await dp.evaluate(() => { const c = JSON.parse(localStorage.getItem('million-fathoms-v1') || '{"rolls":0}'); return c.rolls === 0 && !c.log?.length; }), 'Descent rolls and Reset Descent leave Classic progress alone');
+  await dp.click('[data-mode=classic]'); await dp.waitForTimeout(200);
+  expect(await reelCount(dp) === 7 && await dp.isVisible('#sRolls') && !(await dp.$('#lvl')), 'switching back to Classic restores seven reels and Classic stats');
+  // dev Level table with #dev
+  const dev = await page({ viewport: { width: 1360, height: 820 } }, null, FILE + '#dev');
+  await dev.click('[data-mode=descent]'); await dev.click('[data-open=levels]'); await dev.waitForTimeout(200);
+  expect(await dev.evaluate(() => document.querySelectorAll('#lvLevels tbody tr').length === 30 && document.querySelectorAll('#lvDepths tbody tr').length === 6), '#dev: Level table lists 30 levels and 6 depths');
+  await dev.click('#lSim'); await dev.waitForFunction(() => document.querySelector('#lvLevels tbody tr td:nth-child(7)').textContent !== '', null, { timeout: 30000 });
+  await dev.screenshot({ path: `${OUT}/d5-levels.png`, fullPage: true });
+  expect(true, 'Level table simulates rolls per level');
+  // reduced motion: a digit-up has no shake and no slide
+  const dr = await page({ viewport: { width: 1100, height: 760 }, reducedMotion: 'reduce' });
+  await dr.click('[data-mode=descent]');
+  await dr.evaluate(() => MF.descent.jump(5, MF.descent.levels[4].req - 1));
+  await dr.evaluate(() => { MF.play(3); });
+  await dr.waitForSelector('.reel.enter', { timeout: 20000 });
+  const still2 = await dr.evaluate(() => ({ shake: document.getElementById('app').classList.contains('shake'), enter: getComputedStyle(document.querySelector('.reel.enter')).animationDuration }));
+  await settle(dr);
+  expect(!still2.shake && parseFloat(still2.enter) < .001, `reduced motion: digit-up without shake or slide (${still2.enter})`);
+  // effects off: no shake on a digit-up either
+  const de = await page({ viewport: { width: 1100, height: 760 } });
+  await de.click('[data-mode=descent]'); await de.click('[data-open=settings]'); await de.click('#oFx'); await de.keyboard.press('Escape');
+  await de.evaluate(() => MF.descent.jump(5, MF.descent.levels[4].req - 1));
+  await de.evaluate(() => { MF.play(3); });
+  await de.waitForSelector('.reel.enter', { timeout: 20000 }); await de.waitForTimeout(200);
+  expect(!(await de.evaluate(() => document.getElementById('app').classList.contains('shake'))), 'effects off: digit-up without shake');
+  await settle(de);
+  // phone, in Descent
+  const dm = await page({ ...devices['iPhone 13'] });
+  await dm.tap('[data-mode=descent]'); await dm.evaluate(() => MF.descent.jump(26)); await dm.tap('#btnRoll'); await dm.waitForTimeout(600); await settle(dm);
+  await dm.screenshot({ path: `${OUT}/d6-phone.png` });
+  const dfit = await dm.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth, machine: document.querySelector('.machine').getBoundingClientRect().right, dock: document.querySelector('.dock').getBoundingClientRect().bottom, h: innerHeight, reels: document.querySelectorAll('.reel').length }));
+  expect(dfit.sw <= dfit.cw && dfit.machine <= dfit.cw && dfit.dock <= dfit.h && dfit.reels === 7, 'phone: Descent at depth 6 (six reels plus carry) fits the screen');
   console.log('errors', errors.slice(0, 6), 'external requests', external);
   expect(!errors.length, 'no page errors');
   expect(!external.length, 'no network requests');

@@ -24,3 +24,14 @@ export const REVEAL: Record<'show' | 'fast', { badge: number; extra: number[]; c
   fast: { badge: 50, extra: [0, 0, 10, 20, 30, 40], count: 40, outranked: 100, lead: 0 },
 };
 export const badgeMs = (speed: 'show' | 'fast', tier: number) => REVEAL[speed].badge + REVEAL[speed].extra[tier];
+
+/** Descent, after the reveal: the roll's EP climbs into the level bar, then each level-up plays in turn.
+    climb:  the "+EP" label rising from the counter into the bar
+    fill:   the bar filling (CSS transition)
+    level:  a level-up moment
+    digit:  a digit-up moment: the new reel slides in and the zone name flashes
+    enter:  how long the new reel takes to slide in (CSS animation) */
+export const DESCENT: Record<'show' | 'fast', { climb: number; fill: number; level: number; digit: number; enter: number }> = {
+  show: { climb: 600, fill: 650, level: 900, digit: 1900, enter: 800 },
+  fast: { climb: 160, fill: 180, level: 380, digit: 1000, enter: 450 },
+};
