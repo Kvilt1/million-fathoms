@@ -10,7 +10,9 @@
     "test:ui": "node test_ui.js",
     "test:highlights": "tsx tests/highlights_test.ts",
     "test:glyphs": "tsx tests/glyphs_test.ts",
-    "test:music": "tsx tests/music_test.ts"
+    "test:music": "tsx tests/music_test.ts",
+    "data:descent": "tsx scripts/descent-data.ts",
+    "test:descent": "tsx tests/descent_test.ts"
   },
   "dependencies": {
     "react": "^19.3.1",
