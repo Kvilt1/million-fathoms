@@ -2,11 +2,14 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { ALL_BADGES, BADGE_TIERS, BY_NAME, TIERS, MAX_ROLL, ROLLS, fmt, pctText, randomRoll, scoreRoll } from '../game/score';
 import { SETS, setDone } from '../game/sets';
 import {
-  useGame, closeDrawer, setTab, setCheck, watch, setOpt, wipe, Sound, type Tab,
+  useGame, closeDrawer, setTab, setCheck, watch, setOpt, wipe, wipeDescent, tabsFor, Sound, type Tab,
 } from '../game/controller';
+import { BADGES_AT, STATS, FLOORS, firstDepth, trend, badgeAt, sampleTotal, sizeAt } from '../descent/score';
+import { TABLE, simulateRolls } from '../descent/levels';
+import { PACING } from '../descent/pacing';
 import { Icon, Row, Outranked, cssVars } from './parts';
 
-const TABS: [Tab, string][] = [['log', 'Log'], ['codex', 'Badges'], ['sets', 'Sets'], ['check', 'Check a number'], ['how', 'How it scores'], ['settings', 'Settings']];
+const TAB_NAMES: Record<Tab, string> = { log: 'Log', codex: 'Badges', sets: 'Sets', check: 'Check a number', how: 'How it scores', settings: 'Settings', levels: 'Level table' };
 
 export function Drawer() {
   const { V } = useGame();
@@ -14,7 +17,7 @@ export function Drawer() {
   const pane = useRef<HTMLDivElement>(null);
   // Badge filters and the reset prompt live here so they survive closing and reopening the drawer.
   const [codex, setCodex] = useState({ tierF: 'all', own: 'all', q: '' });
-  const [confirm, setConfirm] = useState(false);
+  const [confirm, setConfirm] = useState(false), [confirmD, setConfirmD] = useState(false);
   useEffect(() => { if (open) pane.current?.focus({ preventScroll: true }); }, [open]);
   useEffect(() => { if (pane.current) pane.current.scrollTop = 0; }, [open, tab]);
 
@@ -22,8 +25,8 @@ export function Drawer() {
     <div className="drawer" id="drawer" hidden={!open} onClick={e => { if (e.target === e.currentTarget) closeDrawer(); }}>
       <div className="sheet" role="dialog" aria-modal="true" aria-label="Game details">
         <div className="tabs" role="tablist" id="tabs">
-          {TABS.map(([k, l]) => (
-            <button key={k} role="tab" aria-selected={k === tab} data-tab={k} onClick={() => { setConfirm(false); Sound.ui(); setTab(k); }}>{l}</button>
+          {tabsFor(V.mode).map(k => (
+            <button key={k} role="tab" aria-selected={k === tab} data-tab={k} onClick={() => { setConfirm(false); setConfirmD(false); Sound.ui(); setTab(k); }}>{TAB_NAMES[k]}</button>
           ))}
           <button className="close" id="drawerClose" aria-label="Close" onClick={closeDrawer}>×</button>
         </div>
@@ -34,7 +37,8 @@ export function Drawer() {
             tab === 'sets' ? <PaneSets /> :
             tab === 'check' ? <PaneCheck /> :
             tab === 'how' ? <PaneHow /> :
-            <PaneSettings confirm={confirm} setConfirm={setConfirm} />
+            tab === 'levels' ? <PaneLevels /> :
+            <PaneSettings confirm={confirm} setConfirm={setConfirm} confirmD={confirmD} setConfirmD={setConfirmD} />
           )}
         </div>
       </div>
@@ -72,15 +76,24 @@ function PaneLog() {
 
 type CodexF = { tierF: string; own: string; q: string };
 function PaneCodex({ f, set }: { f: CodexF; set: (p: Partial<CodexF>) => void }) {
-  const { S } = useGame();
-  const found = Object.keys(S.badges).length, q = f.q.trim().toLowerCase();
-  const list = ALL_BADGES.filter(b => (f.tierF === 'all' || b.tier === +f.tierF) && (f.own === 'all' || (f.own === 'found') === !!S.badges[b.name]) && (!q || (b.name + ' ' + b.desc).toLowerCase().includes(q))).sort((a, b) => a.ep - b.ep);
+  const { S, D, V } = useGame();
+  const desc = V.mode === 'descent', d = D.depth, have = desc ? D.badges : S.badges;
+  const base = desc ? BADGES_AT[d - 1] : ALL_BADGES, size = desc ? sizeAt(d) : ROLLS;
+  const possible = base.filter(b => b.count > 0).length, deeper = base.length - possible;
+  const found = base.filter(b => have[b.name]).length, q = f.q.trim().toLowerCase();
+  const own = !desc && f.own === 'deeper' ? 'all' : f.own;
+  const list = base.filter(b => (f.tierF === 'all' || (b.count > 0 && b.tier === +f.tierF))
+    && (own === 'all' || (own === 'deeper' ? !b.count : b.count > 0 && (own === 'found') === !!have[b.name]))
+    && (!q || (b.name + ' ' + b.desc).toLowerCase().includes(q)))
+    .sort((a, b) => (+!a.count - +!b.count) || (a.count ? a.ep - b.ep : firstDepth(a.name) - firstDepth(b.name)));
   return <>
+    {desc && <p id="cDepth">Values at <b>depth {d}</b>, rolling 0 to {fmt(size - 1)}. {d > 1 ? 'Arrows compare with depth ' + (d - 1) + '.' : ''}</p>}
     <div className="filters">
       <input className="search" id="cSearch" placeholder="Search 233 badges" aria-label="Search badges" value={f.q} onChange={e => set({ q: e.target.value })} />
-      <button className="chip" data-own="all" aria-pressed={f.own === 'all'} onClick={() => set({ own: 'all' })}>All</button>
-      <button className="chip" data-own="found" aria-pressed={f.own === 'found'} onClick={() => set({ own: 'found' })}>Found {found}</button>
-      <button className="chip" data-own="missing" aria-pressed={f.own === 'missing'} onClick={() => set({ own: 'missing' })}>Missing {233 - found}</button>
+      <button className="chip" data-own="all" aria-pressed={own === 'all'} onClick={() => set({ own: 'all' })}>All</button>
+      <button className="chip" data-own="found" aria-pressed={own === 'found'} onClick={() => set({ own: 'found' })}>Found {found}</button>
+      <button className="chip" data-own="missing" aria-pressed={own === 'missing'} onClick={() => set({ own: 'missing' })}>Missing {possible - found}</button>
+      {desc && <button className="chip" data-own="deeper" aria-pressed={own === 'deeper'} onClick={() => set({ own: 'deeper' })}>Deeper {deeper}</button>}
     </div>
     <div className="filters">
       <button className="chip" data-tierf="all" aria-pressed={f.tierF === 'all'} onClick={() => set({ tierF: 'all' })}>Any rarity</button>
@@ -89,17 +102,32 @@ function PaneCodex({ f, set }: { f: CodexF; set: (p: Partial<CodexF>) => void })
     <div id="cGrid">
       {!list.length ? <p className="empty">No badges match. Clear the search or pick another filter.</p> : (
         <div className="grid">{list.map(b => {
-          const hits = S.badges[b.name] || 0, odds = ROLLS / b.count;
+          const hits = have[b.name] || 0;
+          if (!b.count) return (
+            <div key={b.name} className="card locked deeper" data-deeper={firstDepth(b.name)}>
+              <Icon b={b} /><span className="nm">{b.name}</span><span className="ds">{b.desc}</span>
+              <span className="ft"><span><b>Deeper</b></span><span>Opens at depth {firstDepth(b.name)}</span></span>
+            </div>
+          );
+          const odds = size / b.count;
           return (
             <div key={b.name} className={`card ${hits ? '' : 'locked'}`} style={cssVars({ '--c': TIERS[b.tier + 1].color })}>
               <Icon b={b} /><span className="nm">{b.name}</span><span className="ds">{b.desc}</span>
-              <span className="ft"><span><b>{fmt(b.ep)}</b> EP</span><span>1 in {odds < 10 ? odds.toFixed(1) : fmt(odds)}</span><span>{hits ? fmt(hits) + '×' : 'Not found'}</span></span>
+              <span className="ft"><span><b>{fmt(b.ep)}</b> EP{desc && <Trend name={b.name} d={d} />}</span><span>1 in {odds < 10 ? odds.toFixed(1) : fmt(odds)}</span><span>{hits ? fmt(hits) + '×' : 'Not found'}</span></span>
             </div>
           );
         })}</div>
       )}
     </div>
   </>;
+}
+/** More or less EP than at the depth above, or new at this depth. */
+function Trend({ name, d }: { name: string; d: number }) {
+  const t = trend(name, d);
+  if (!t || t === 'same') return null;
+  if (t === 'new') return <span className="trend new" title={`Can't happen at depth ${d - 1}`}>new</span>;
+  const was = badgeAt(name, d - 1).ep, label = `${t === 'up' ? 'More' : 'Less'} than the ${fmt(was)} EP at depth ${d - 1}`;
+  return <i className={`trend ${t}`} title={label} aria-label={label} role="img" />;
 }
 
 function PaneSets() {
@@ -169,12 +197,13 @@ function PaneHow() {
       </table>
     </div>
     <h3>Badge rarity</h3><p>Common appears on over 10% of rolls, Uncommon on 1 to 10%, Rare on 0.1 to 1%, Epic on 0.01 to 0.1%, Anomaly on 0.001 to 0.01%, and Mythic on less than 0.001%.</p>
+    <h3>Descent</h3><p>Descent starts you with one reel rolling 0 to 9. Each depth adds a reel: depth <i>d</i> rolls 0 to 10<sup>d</sup> − 1, and depth 6 rolls 0 to 1,000,000 like Classic. The rules are the same, but a badge is worth 100 divided by its chance <b>at your depth</b>, so its value changes as you go deeper, and some badges can't happen until you have more reels. A roll's tier comes from how it ranks among every roll at your depth. All the EP you earn is XP. It fills the level bar, five levels to a depth, and the fifth adds the next reel. Descent has its own save, separate from Classic.</p>
     <h3>About this game</h3><p>Million Fathoms is an unofficial offline fan practice game based on the scoring of the daily game RNGdle. It has no connection to RNGdle, and rolls here don't count towards any account there. Badge rules were rebuilt from publicly shared data, so a score could occasionally differ from the real game.</p>
   </>;
 }
 
-function PaneSettings({ confirm, setConfirm }: { confirm: boolean; setConfirm: (v: boolean) => void }) {
-  const { S } = useGame();
+function PaneSettings({ confirm, setConfirm, confirmD, setConfirmD }: { confirm: boolean; setConfirm: (v: boolean) => void; confirmD: boolean; setConfirmD: (v: boolean) => void }) {
+  const { S, D } = useGame();
   const o = S.opts;
   return (
     <div className="settings">
@@ -194,6 +223,56 @@ function PaneSettings({ confirm, setConfirm }: { confirm: boolean; setConfirm: (
             </div></>
           : <button className="btn ghost" id="oReset" onClick={() => setConfirm(true)}>Reset progress</button>}
       </div>
+      <div id="dResetBox">
+        {confirmD
+          ? <><p style={{ color: 'var(--foam)' }}>Erase Descent progress: depth {D.depth}, level {D.level}, {fmt(D.xp)} XP and {fmt(D.rolls)} rolls? Classic progress stays. This can't be undone.</p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn danger" id="dWipe" onClick={() => { wipeDescent(); setConfirmD(false); }}>Erase Descent</button>
+              <button className="btn ghost" id="dKeep" onClick={() => setConfirmD(false)}>Keep it</button>
+            </div></>
+          : <button className="btn ghost" id="dReset" onClick={() => setConfirmD(true)}>Reset Descent</button>}
+      </div>
     </div>
   );
+}
+
+/* Dev only (#dev): the whole level table, for comparing and tuning pacing in src/descent/pacing.ts. */
+function PaneLevels() {
+  const { D } = useGame();
+  const [sim, setSim] = useState<number[] | null>(null), [busy, setBusy] = useState(false);
+  const run = () => { setBusy(true); setTimeout(() => { setSim(TABLE.map(r => simulateRolls(r, sampleTotal))); setBusy(false); }, 20); };
+  const r1 = (v: number) => v < 100 ? v.toFixed(1) : fmt(v);
+  return <>
+    <p>Dev only. Pacing lives in <b>src/descent/pacing.ts</b>: target rolls per depth {PACING.targetRolls.map(fmt).join(', ')}; level shares {PACING.levelShare.join(', ')}; requirement = target rolls × {PACING.basis} EP per roll, rounded to {PACING.sigFigs} figures.</p>
+    <h3>Per depth</h3>
+    <div style={{ overflowX: 'auto' }}>
+      <table className="lvtab" id="lvDepths">
+        <thead><tr><th>Depth</th><th>Zone</th><th className="r">Space</th><th className="r">Badges</th><th className="r">Median EP</th><th className="r">Mean EP</th><th className="r">Mean ÷ median</th><th className="r">Max EP</th><th>Tier floors, Common to Mythic</th></tr></thead>
+        <tbody>{STATS.map((st, i) => (
+          <tr key={i} className={i + 1 === D.depth ? 'here' : ''}>
+            <td>{i + 1}</td><td style={{ color: TIERS[i].color }}>{TIERS[i].zone}</td><td className="r">{fmt(st.size)}</td>
+            <td className="r">{BADGES_AT[i].filter(b => b.count).length}</td><td className="r">{fmt(st.median)}</td><td className="r">{fmt(st.mean)}</td>
+            <td className="r">{(st.mean / st.median).toFixed(2)}</td><td className="r">{fmt(st.max)}</td>
+            <td>{FLOORS[i].slice(1).map(v => v === Infinity ? '–' : fmt(v)).join(' · ')}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+    <h3>Per level</h3>
+    <p>Target rolls is what the requirement was built from. Rolls at mean is requirement ÷ mean EP; over many rolls EP averages toward the mean, so this runs faster than the target. Simulated is the median of 201 runs drawn from the depth's exact roll distribution.</p>
+    <button className="btn ghost" id="lSim" disabled={busy} onClick={run}>{busy ? 'Simulating…' : sim ? 'Simulate again' : 'Simulate rolls per level'}</button>
+    <div style={{ overflowX: 'auto' }}>
+      <table className="lvtab" id="lvLevels">
+        <thead><tr><th>Lv</th><th>Depth</th><th className="r">Needs EP</th><th className="r">XP from</th><th className="r">Target rolls</th><th className="r">Rolls at mean</th><th className="r">Simulated</th><th>Then</th></tr></thead>
+        <tbody>{TABLE.map((r, i) => (
+          <tr key={r.level} className={r.level === D.level ? 'here' : ''}>
+            <td>{r.level}</td><td>{r.depth}</td><td className="r">{fmt(r.req)}</td><td className="r">{fmt(r.start)}</td>
+            <td className="r">{r1(r.targetRolls)}</td><td className="r">{r1(r.req / STATS[r.depth - 1].mean)}</td>
+            <td className="r">{sim ? fmt(sim[i]) : ''}</td>
+            <td>{r.level === TABLE.length ? 'Cap' : r.step === PACING.levelsPerDepth ? `Reel ${r.depth + 1}` : ''}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  </>;
 }

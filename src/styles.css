@@ -133,6 +133,22 @@ canvas#fx { pointer-events: none; z-index: 40; }
 .reel.tense { box-shadow: inset 0 0 0 2px var(--pink), inset 0 0 22px #ff5d8f99; }
 .comma { width: 8px; align-self: flex-end; color: var(--drift); font-size: 30px; line-height: 1; text-align: center; flex: none; }
 
+/* Descent: a reel joining slides in from the left, bright, then settles. */
+.reel.enter { animation: reelin var(--enter-ms, 800ms) var(--ease-snap) both; }
+@keyframes reelin { 0% { width: 0; opacity: 0; transform: translateY(-30%); filter: brightness(3); } 60% { opacity: 1; filter: brightness(1.8); } }
+
+/* Descent level bar: "Lv 3 · Depth 1 · 640 / 900 EP", a bar in the depth's colour, and the roll's EP climbing in. */
+.lvl { position: relative; width: min(580px, 100%); box-sizing: border-box; padding: 6px 14px 8px; background: linear-gradient(#101d33eb, #0b1526eb); box-shadow: var(--pod); }
+.lvl-text { font-size: 20px; line-height: 1; letter-spacing: .08em; color: var(--drift); text-align: center; }
+.lvl-text b { color: var(--c); text-shadow: 0 0 10px color-mix(in srgb, var(--c) 55%, transparent); font-weight: normal; }
+.lvl-text span { color: var(--foam); }
+.lvl-bar { height: 10px; margin-top: 6px; overflow: hidden; background: #0a1322; box-shadow: 0 0 0 2px var(--ring-dark), inset 0 0 0 1px var(--ring); }
+.lvl-bar i { display: block; height: 100%; background: var(--c); box-shadow: 0 0 10px var(--c); transition: width var(--fill-ms, 600ms) var(--ease-out); }
+.lvl-bar i.snap { transition: none; }
+.lvl-gain { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); pointer-events: none; white-space: nowrap; font-size: 26px; color: var(--c); text-shadow: 0 0 12px var(--c), 0 2px 0 #0009; animation: climb var(--climb-ms, 600ms) var(--ease-out) both; }
+@keyframes climb { 0% { transform: translate(-50%, 70px) scale(.8); opacity: 0; } 25% { opacity: 1; } 80% { transform: translate(-50%, -8px) scale(1.1); opacity: 1; } 100% { transform: translate(-50%, -14px) scale(.6); opacity: 0; } }
+.lvl.bump .lvl-text b { display: inline-block; animation: bump .5s var(--ease-snap); }
+
 /* Readout: a HUD pod with the EP counter, the tier stamp and the depth line. */
 .readout {
   display: grid; justify-items: center; align-content: center; gap: 2px; text-align: center;
@@ -189,6 +205,7 @@ canvas#fx { pointer-events: none; z-index: 40; }
 .tools label { display: inline-flex; align-items: center; gap: 8px; }
 .seg { display: inline-flex; gap: 8px; padding: 0 4px; }
 .seg button { padding: 4px 10px 2px; }
+.seg.mode button { font-size: 18px; letter-spacing: .1em; text-transform: uppercase; }
 select { background: #0b1526e6; border: 2px solid var(--ring); padding: 2px 8px 0; color: var(--foam); text-transform: uppercase; letter-spacing: .1em; }
 select:focus-visible { border-color: #4de3ffa6; outline: 0; }
 
@@ -215,6 +232,10 @@ select:focus-visible { border-color: #4de3ffa6; outline: 0; }
 .ladder b { color: var(--c); text-transform: uppercase; letter-spacing: .12em; text-shadow: 0 0 10px color-mix(in srgb, var(--c) 45%, transparent); }
 .ladder span { color: var(--drift); font-size: 17px; }
 .ladder i { color: var(--foam); font-style: normal; }
+.ladder .here { background: color-mix(in srgb, var(--c) 12%, transparent); box-shadow: inset 3px 0 0 var(--c); }
+.ladder .deep b, .ladder .deep span, .ladder .deep i { opacity: .45; }
+.lvtab { font-size: 16px; white-space: nowrap; }
+.lvtab tr.here td { color: var(--foam); background: #4de3ff1a; }
 .hint { padding: 4px 18px 12px; margin: 0; color: var(--drift); font-size: 17px; }
 
 /* ---------- Dock ---------- */
@@ -227,6 +248,8 @@ select:focus-visible { border-color: #4de3ffa6; outline: 0; }
 .zone-flash { position: fixed; z-index: 30; left: 0; right: 0; top: 16%; display: flex; justify-content: center; align-items: center; gap: .5em; pointer-events: none; font-size: clamp(34px, 6.4vw, 72px); line-height: 1; letter-spacing: .2em; text-transform: uppercase; color: var(--c); text-shadow: 0 0 22px var(--c), 0 3px 0 #0009; opacity: 0; }
 .zone-flash::before, .zone-flash::after { content: ""; width: clamp(30px, 8vw, 120px); height: 2px; background: var(--c); box-shadow: 0 0 10px var(--c); }
 .zone-flash.go { animation: zone 1.1s var(--ease-out); }
+.zone-flash.big { top: 46%; font-size: clamp(44px, 9vw, 96px); }
+.zone-flash.big.go { animation-duration: 1.8s; }
 @keyframes zone { 0% { opacity: 0; transform: scaleX(1.4); filter: brightness(3); } 14%, 62% { opacity: 1; transform: none; filter: none; } 100% { opacity: 0; } }
 .whiteout { position: fixed; inset: 0; z-index: 35; pointer-events: none; opacity: 0; background: var(--c, var(--foam)); }
 .whiteout.go { animation: white .8s ease-out; }
@@ -266,6 +289,13 @@ select:focus-visible { border-color: #4de3ffa6; outline: 0; }
 .card .ds { grid-column: 1 / -1; font-size: 16px; color: var(--drift); line-height: 1.1; margin-top: 4px; }
 .card .ft { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 8px; font-size: 15px; color: var(--drift); margin-top: 6px; padding-top: 4px; border-top: 1px dashed var(--hairline); }
 .card .ft b { color: var(--foam); }
+.card.deeper { opacity: .62; }
+.card.deeper .ft b { color: var(--drift); text-transform: uppercase; letter-spacing: .12em; }
+/* Value moved since the depth above: pixel triangles, up in cyan, down in pink. */
+.trend { display: inline-block; vertical-align: middle; margin-left: 6px; }
+.trend.up, .trend.down { width: 10px; height: 8px; background: var(--cyan); clip-path: polygon(50% 0, 100% 100%, 0 100%); box-shadow: none; }
+.trend.down { background: var(--pink); clip-path: polygon(0 0, 100% 0, 50% 100%); }
+.trend.new { font-size: 13px; line-height: 1; padding: 2px 4px 0; color: var(--abyss); background: var(--gold); text-transform: uppercase; letter-spacing: .1em; }
 .sets { display: grid; gap: 18px; }
 .set h4 { margin: 0; display: flex; justify-content: space-between; gap: 10px; font-size: 20px; letter-spacing: .06em; text-transform: uppercase; }
 .set h4 span { color: var(--drift); }
@@ -370,6 +400,10 @@ input[type=range]::-moz-range-thumb { width: 14px; height: 22px; border: 0; bord
   .tools { flex-wrap: nowrap; font-size: 15px; gap: 8px; max-width: 100%; letter-spacing: .06em; }
   .seg { gap: 6px; padding: 0 2px; }
   .seg button { padding: 3px 6px 1px; }
+  .seg.mode { order: 2; }
+  .seg.mode button { font-size: 15px; letter-spacing: .04em; }
+  .lvl { padding: 4px 10px 6px; }
+  .lvl-text { font-size: 17px; letter-spacing: .02em; }
   select { padding: 1px 4px 0; letter-spacing: .04em; }
   .haul { margin: 4px 4px 8px; }
   .haul header { padding: 8px 6px 5px; margin: 0 10px; }
