@@ -14,7 +14,7 @@ import { createFX, type FX } from '../engine/fx';
 import { createReels, type Reels } from '../engine/reels';
 import { REELS, TENSE, REVEAL, DESCENT, badgeMs, type RunSpeed } from './timing';
 import { highlight, type HLStyle } from './highlights';
-import { scoreAt, tierAt, rollAt, reelsAt, sizeAt, type DResult } from '../descent/score';
+import { scoreAt, tierAt, rollAt, reelsAt, sizeAt, FLOORS, type DResult } from '../descent/score';
 import { TABLE, gain, bar, maxed, leadU, type LevelEvent, type Progress } from '../descent/levels';
 import { loadDescent, saveDescent, saveDescentNow, freshDescent, loadMode, saveMode, type DescentSave, type Mode } from '../descent/save';
 
@@ -31,6 +31,8 @@ export const DEV = import.meta.env.DEV || /(^|[#&])dev(&|$)/.test(location.hash)
 export type Tab = 'log' | 'codex' | 'sets' | 'check' | 'how' | 'settings' | 'levels';
 export type { Mode };
 /** Drawer tabs per mode. Log, Sets and Check are Classic's; Descent adds the dev Level table. */
+/** The key that opens each drawer tab, shown on the dock's key caps. */
+export const HOTKEY: Record<Tab, string> = { log: 'L', codex: 'B', sets: 'S', check: 'C', how: 'H', settings: 'O', levels: 'V' };
 export const tabsFor = (m: Mode): Tab[] => m === 'classic' ? ['log', 'codex', 'sets', 'check', 'how', 'settings'] : ['codex', 'how', 'settings', ...(DEV ? ['levels' as const] : [])];
 export type MetaView = { text: string } | { zone: string; fm: number; pct: number; depth?: number };
 export interface HaulRow { b: Badge; isNew: boolean; animate: boolean; key: string }
@@ -77,7 +79,30 @@ function shake(amp: number, ms = 420) {
   a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake');
 }
 function retrigger(el: HTMLElement, cls: string) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
-function setEP(v: number) { $('ep').innerHTML = `${fmt(v)} <small>EP</small>`; }
+/* The EP counter, and under it how far the running total is from the next tier: [#####.......] RARE in 1,943 */
+const BAR = 24;
+let barShown = '';
+function setEP(v: number) {
+  $('ep').innerHTML = `${fmt(v)} <small>EP</small>`;
+  const floors = V.mode === 'descent' ? FLOORS[D.depth - 1] : TIERS.map(t => t.floor);
+  let t = 6; while (t > 0 && v < floors[t]) t--;
+  const next = floors[t + 1], top = next === undefined || next === Infinity;
+  const fill = top ? BAR : Math.floor(BAR * clamp((v - floors[t]) / (next - floors[t]), 0, 1));
+  const html = `[<b>${'#'.repeat(fill)}</b><i>${'.'.repeat(BAR - fill)}</i>] ` + (top ? `<b>${TIERS[t].name.toUpperCase()}</b> top tier` : `<b>${TIERS[t + 1].name.toUpperCase()}</b> in ${fmt(next - v)}`);
+  if (html !== barShown) { barShown = html; $('tierbar').innerHTML = html; }
+}
+/* The readback under the reels: the number in hex and binary, and its digit sum. It scrambles while the reels spin. */
+let hexTimer = 0;
+function setHex(n: number | null) {
+  clearInterval(hexTimer);
+  $('hex').innerHTML = n == null ? 'no sounding yet' : hexLine(n);
+}
+const hexLine = (n: number) => `<b>0x${n.toString(16).toUpperCase().padStart(5, '0')}</b><span class="x"> · 0b${n.toString(2)}</span> · sum <b>${[...String(n)].reduce((a, c) => a + +c, 0)}</b>`;
+function scrambleHex(size: number) {
+  clearInterval(hexTimer);
+  if (reduced) { $('hex').textContent = 'sounding...'; return; }
+  hexTimer = window.setInterval(() => { $('hex').innerHTML = hexLine(Math.floor(Math.random() * size)); }, 50);
+}
 let epAnim = 0, epShown = 0;
 function tweenEP(to: number, ms: number) {
   cancelAnimationFrame(epAnim);
@@ -161,12 +186,12 @@ export async function play(n: number, { preview = false } = {}) {
   const top = desc ? d - 1 : 0, rules = desc ? descentRules(d, D.xp, preview) : classicRules(preview);
   if (desc) { r.u = rules.zoneOf(r.total); r.fm = Math.round(fathoms(r.u)); }
   V.rollLabel = speed === 'instant' ? 'Roll' : 'Skip';
-  setTier('var(--foam)'); Reel.tint('var(--cyan)'); Scene.tierNow = 0;
+  setTier('var(--ink)'); Reel.tint('var(--amber)'); Scene.tierNow = 0;
   V.haulTitle = preview ? 'Replay' : `Roll ${fmt((desc ? D.rolls : S.rolls) + 1)}`; V.haulCount = '';
   V.stamp = { text: '', mythic: false, hit: 0 };
 
   if (speed === 'instant') {
-    Reel.setNow(n); V.haul = { rows: [], outranked: [] };
+    Reel.setNow(n); setHex(n); V.haul = { rows: [], outranked: [] };
     Scene.sink(r.u, 30);
     tweenEP(r.total, 0);
     emit();
@@ -176,7 +201,9 @@ export async function play(n: number, { preview = false } = {}) {
     if (speed === 'show') Sound.press();
     Sound.music?.cue({ type: 'press', speed });
     const tense = speed === 'show' ? TENSE[r.tier] : 0;
+    scrambleHex(desc ? sizeAt(d) : ROLLS);
     await Reel.spin(n, { spinMs: cfg.spin, stagger: cfg.stagger, tense, skip: () => G.skip });
+    setHex(n);
     Scene.sink(top + .05, 6); if (speed === 'show' && !G.skip) Sound.plunge();
     await reveal(r, speed, preview, rules);
     Reel.highlight(n, null); V.now = null;
@@ -195,7 +222,7 @@ export async function play(n: number, { preview = false } = {}) {
   showFinal(r); celebrate(r, speed);
   G.lastResult = r;
   refreshStats(); if (!preview) { if (info.fresh.size) bump('sBadges'); notify(r, info); }
-  G.busy = false;
+  G.busy = false; V.rollLabel = 'Roll';
   emit();
 
   if (r.tier === 6 && speed !== 'instant' && !preview) await mythicCard(r);
@@ -250,7 +277,7 @@ export function rollNext() {
 }
 
 /* ---------- Descent ---------- */
-const CYAN = '#4de3ff', GOLD = '#ffd166';
+const AMBER = '#ffd277', gold = () => TIERS[6].color;
 function recordDescent(r: DResult) {
   D.rolls++;
   const fresh = new Set<string>();
@@ -276,7 +303,7 @@ async function finishDescent(r: DResult, speed: RunSpeed, preview: boolean) {
   if (info) notifyDescent(r, info);
   emit();
   if (info) await climb(info, speed);
-  G.busy = false;
+  G.busy = false; V.rollLabel = 'Roll';
   emit();
 }
 function notifyDescent(r: DResult, info: DInfo) {
@@ -313,8 +340,8 @@ async function climb(info: DInfo, speed: RunSpeed) {
 async function levelMoment(e: LevelEvent, T: (typeof DESCENT)['show']) {
   const lvl = $('lvl').getBoundingClientRect(), x = lvl.left + lvl.width / 2, y = lvl.top + lvl.height / 2;
   if (e.type === 'level') {
-    flashText(`Level ${e.level}`, CYAN); bump('lvl'); Sound.fresh(); Sound.ping(4, 2);
-    FXs.burst(x, y, CYAN, 24, 3.5); Scene.ping(); emit();
+    flashText(`Level ${e.level}`, AMBER); bump('lvl'); Sound.fresh(); Sound.ping(4, 2);
+    FXs.burst(x, y, AMBER, 24, 3.5); Scene.ping(); emit();
     await wait(T.level);
   } else if (e.type === 'digit') {
     const t = TIERS[e.depth - 1];
@@ -327,7 +354,7 @@ async function levelMoment(e: LevelEvent, T: (typeof DESCENT)['show']) {
     Scene.sink(e.depth - 1, 4); Scene.ping(); emit();
     await wait(T.digit);
   } else {
-    flashText('Level 30', GOLD, true); Sound.fanfareSet(); FXs.burst(x, y, GOLD, 80, 7); shake(4, 500); Scene.ping(); emit();
+    flashText('Level 30', gold(), true); Sound.fanfareSet(); FXs.burst(x, y, gold(), 80, 7); shake(4, 500); Scene.ping(); emit();
     await wait(T.digit);
   }
 }
@@ -341,12 +368,12 @@ function rest() {
     const last = S.log[0];
     if (last) {
       const r = scoreRoll(last.n);
-      Reel.setNow(r.n); setEP(r.total); epShown = r.total; Scene.sink(r.u, 8); showFinal(r);
+      Reel.setNow(r.n); setHex(r.n); setEP(r.total); epShown = r.total; Scene.sink(r.u, 8); showFinal(r);
       V.haulTitle = 'Last roll';
       V.haul = { rows: rows(byEpDesc(r), () => false, false), outranked: r.outranked };
     } else {
-      Reel.setNow(0); Reel.allOff(); setEP(0); epShown = 0; idleHaul(); Scene.sink(0, 8);
-      setTier('var(--foam)'); Reel.tint('var(--cyan)'); Scene.tierNow = 0;
+      Reel.setNow(0); Reel.allOff(); setHex(null); setEP(0); epShown = 0; idleHaul(); Scene.sink(0, 8);
+      setTier('var(--ink)'); Reel.tint('var(--amber)'); Scene.tierNow = 0;
       V.stamp = { text: '', mythic: false, hit: 0 }; V.meta = { text: '0 to 1,000,000. Every roll counts.' };
     }
     return;
@@ -355,12 +382,12 @@ function rest() {
   if (D.last) {
     const r = scoreAt(D.last.n, D.last.d);
     r.u = leadU(D.xp, D.depth); r.fm = Math.round(fathoms(r.u));
-    Reel.setNow(r.n); setEP(r.total); epShown = r.total; Scene.sink(r.u, 8); showFinal(r);
+    Reel.setNow(r.n); setHex(r.n); setEP(r.total); epShown = r.total; Scene.sink(r.u, 8); showFinal(r);
     V.haulTitle = 'Last roll';
     V.haul = { rows: rows(byEpDesc(r), () => false, false), outranked: r.outranked };
   } else {
-    Reel.setNow(0); Reel.allOff(); setEP(0); epShown = 0; Scene.sink(leadU(D.xp, D.depth), 8);
-    setTier('var(--foam)'); Reel.tint('var(--cyan)'); Scene.tierNow = 0;
+    Reel.setNow(0); Reel.allOff(); setHex(null); setEP(0); epShown = 0; Scene.sink(leadU(D.xp, D.depth), 8);
+    setTier('var(--ink)'); Reel.tint('var(--amber)'); Scene.tierNow = 0;
     V.haulTitle = 'Descent'; V.haulCount = `Depth ${D.depth}`; V.haul = null;
     V.stamp = { text: '', mythic: false, hit: 0 }; V.meta = { text: `One reel: 0 to ${fmt(sizeAt(D.depth) - 1)}. Level up to add the next.` };
   }
@@ -402,7 +429,8 @@ export function setOpt<K extends 'sound' | 'vol' | 'ambient' | 'musicVol' | 'eff
 export function wipe() {
   const opts = S.opts; S = fresh(); S.opts = opts; save(); Scene.setBest(null); Scene.sink(0, 5);
   Sound.music?.cue({ type: 'reset' }); Sound.music?.cue({ type: 'unlocks', bestTier: 0 });
-  Reel.setNow(0); tweenEP(0, 0); V.now = null; V.stamp = { text: '', mythic: false, hit: 0 }; V.meta = { text: 'Progress erased. Ready to dive.' }; idleHaul(); emit();
+  Reel.setNow(0); Reel.allOff(); setHex(null); setTier('var(--ink)'); Reel.tint('var(--amber)'); Scene.tierNow = 0;
+  tweenEP(0, 0); V.now = null; V.stamp = { text: '', mythic: false, hit: 0 }; V.meta = { text: 'Progress erased. Ready to dive.' }; idleHaul(); emit();
 }
 
 /* ---------- Keyboard ---------- */
@@ -416,7 +444,7 @@ function onKeyDown(e: KeyboardEvent) {
     if (target.tagName === 'BUTTON' && target.id !== 'btnRoll' && e.key === 'Enter') return;
     e.preventDefault(); $('btnRoll').classList.add('down'); Sound.init(); rollNext();
   } else if (e.key === 'm' || e.key === 'M') { $('btnSound').click(); }
-  else if (e.key === 'b' || e.key === 'B') { openDrawer('codex'); }
+  else if (!e.metaKey && !e.ctrlKey && !e.altKey && (Object.keys(HOTKEY) as Tab[]).some(k => HOTKEY[k] === e.key.toUpperCase() && tabsFor(V.mode).includes(k) && (openDrawer(k), true))) { /* opened */ }
   else if (e.key >= '1' && e.key <= '2') { setSpeed((['show', 'fast'] as const)[+e.key - 1]); }
 }
 function onKeyUp(e: KeyboardEvent) {

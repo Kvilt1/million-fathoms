@@ -7,7 +7,7 @@ import {
 import { BADGES_AT, STATS, FLOORS, firstDepth, trend, badgeAt, sampleTotal, sizeAt } from '../descent/score';
 import { TABLE, simulateRolls } from '../descent/levels';
 import { PACING } from '../descent/pacing';
-import { Icon, Row, Outranked, cssVars } from './parts';
+import { Box, Icon, Row, Outranked, cssVars } from './parts';
 
 const TAB_NAMES: Record<Tab, string> = { log: 'Log', codex: 'Badges', sets: 'Sets', check: 'Check a number', how: 'How it scores', settings: 'Settings', levels: 'Level table' };
 
@@ -24,11 +24,12 @@ export function Drawer() {
   return (
     <div className="drawer" id="drawer" hidden={!open} onClick={e => { if (e.target === e.currentTarget) closeDrawer(); }}>
       <div className="sheet" role="dialog" aria-modal="true" aria-label="Game details">
+        <Box title={`fathom --${tab === 'codex' ? 'badges' : tab}`} foot="esc closes" />
         <div className="tabs" role="tablist" id="tabs">
-          {tabsFor(V.mode).map(k => (
-            <button key={k} role="tab" aria-selected={k === tab} data-tab={k} onClick={() => { setConfirm(false); setConfirmD(false); Sound.ui(); setTab(k); }}>{TAB_NAMES[k]}</button>
+          {tabsFor(V.mode).map((k, i) => (
+            <button key={k} data-i={i} role="tab" aria-selected={k === tab} data-tab={k} onClick={() => { setConfirm(false); setConfirmD(false); Sound.ui(); setTab(k); }}>{TAB_NAMES[k]}</button>
           ))}
-          <button className="close" id="drawerClose" aria-label="Close" onClick={closeDrawer}>×</button>
+          <button className="close" id="drawerClose" aria-label="Close" onClick={closeDrawer}>[x]</button>
         </div>
         <div className="pane" id="pane" tabIndex={-1} ref={pane}>
           {open && (
@@ -137,9 +138,9 @@ function PaneSets() {
     <div className="sets">{SETS.map(s => {
       const n = setDone(S, s), full = n === s.members.length;
       return (
-        <div key={s.name} className="set">
+        <div key={s.name} className={full ? 'set full' : 'set'}>
           <h4>{s.name}<span>{n}/{s.members.length}</span></h4>
-          <div className="bar"><i style={{ width: `${100 * n / s.members.length}%`, ...(full ? { background: 'var(--gold)', boxShadow: '0 0 8px var(--gold)' } : {}) }} /></div>
+          <div className="bar"><i style={{ width: `${100 * n / s.members.length}%` }} /></div>
           <p>{s.desc} {s.members.map((m, i) => <span key={m}>{i > 0 && ', '}{S.badges[m] ? <b>{m}</b> : m}</span>)}</p>
         </div>
       );
@@ -216,7 +217,7 @@ function PaneSettings({ confirm, setConfirm, confirmD, setConfirmD }: { confirm:
       <p style={{ margin: 0 }}>Your progress is saved in this browser only. {S.rolls ? `It holds ${fmt(S.rolls)} rolls.` : ''}</p>
       <div id="resetBox">
         {confirm
-          ? <><p style={{ color: 'var(--foam)' }}>Erase all rolls, badges and sets? This can't be undone.</p>
+          ? <><p style={{ color: 'var(--ink)' }}>Erase all rolls, badges and sets? This can't be undone.</p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn danger" id="oWipe" onClick={() => { wipe(); setConfirm(false); }}>Erase everything</button>
               <button className="btn ghost" id="oKeep" onClick={() => setConfirm(false)}>Keep my progress</button>
@@ -225,7 +226,7 @@ function PaneSettings({ confirm, setConfirm, confirmD, setConfirmD }: { confirm:
       </div>
       <div id="dResetBox">
         {confirmD
-          ? <><p style={{ color: 'var(--foam)' }}>Erase Descent progress: depth {D.depth}, level {D.level}, {fmt(D.xp)} XP and {fmt(D.rolls)} rolls? Classic progress stays. This can't be undone.</p>
+          ? <><p style={{ color: 'var(--ink)' }}>Erase Descent progress: depth {D.depth}, level {D.level}, {fmt(D.xp)} XP and {fmt(D.rolls)} rolls? Classic progress stays. This can't be undone.</p>
             <div style={{ display: 'flex', gap: 8 }}>
               <button className="btn danger" id="dWipe" onClick={() => { wipeDescent(); setConfirmD(false); }}>Erase Descent</button>
               <button className="btn ghost" id="dKeep" onClick={() => setConfirmD(false)}>Keep it</button>

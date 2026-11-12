@@ -27,7 +27,7 @@ Built with React, TypeScript and Vite, bundled into a single HTML file by `vite-
 - `src/engine/`: the canvas scene, reels, particles and Web Audio sound
 - `src/ui/`: React components
 - `src/styles.css`, `src/fonts.css`: styling and the embedded VT323 font
-- `docs/krillion-style-guide.md`: the visual reference for the look, colours, type and sound
+- `docs/krillion-style-guide.md`: the reference for the previous look; the current terminal look is described in `CLAUDE.md`
 - `test_ui.js`: Playwright playthrough on desktop and phone
 - `tests/rules_snapshot.ts`: checks every rule and every roll's score against `tests/baseline.json`, recorded from the original game
 - `tests/highlights_test.ts`: runs every highlight function on sample numbers and on every earned badge of all 1,000,001 rolls

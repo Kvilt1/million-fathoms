@@ -1,27 +1,40 @@
-/* Dive scene: a dark void behind everything. Its depth is the score.
-   A world-anchored grid in the current tier colour scrolls past as the lead sinks; each tier floor is
-   a horizontal line that lights up once the lead passes it. The surface and the trench floor are
-   perspective grids. Life is drawn as thin wireframe shapes: chevron schools, polygons, node clusters
-   and pulsing chains. With reduced motion nothing drifts or pulses and the camera jumps. */
+/* Dive scene: the sea behind everything, typed in ASCII. Its depth is the score.
+   The water is a world-anchored field of characters in the current tier colour that scrolls past as the
+   lead sinks. Each tier floor is a ruled line that lights up once the lead passes it. A boat sits on a
+   wave line at the surface, the trench walls are stacks of '#', and the life is small ASCII creatures:
+   fish, jellyfish, twinkling plankton, swaying tendrils and anglers. The depth ruler down the left is
+   the line-number gutter. With reduced motion nothing drifts or blinks and the camera jumps. */
 import { TIERS, clamp, lerp, fathoms, fmt } from '../game/score';
 
 type Life =
-  | { k: 'school'; u: number; x: number; v: number; n: number; s: number; p: number }
-  | { k: 'poly'; u: number; x: number; v: number; s: number; p: number; sides: number; c: string }
-  | { k: 'node'; u: number; x: number; v: number; n: number; p: number; c: string }
-  | { k: 'chain'; u: number; x: number; v: number; len: number; p: number; c: string };
+  | { k: 'school'; u: number; x: number; v: number; n: number; p: number; big: boolean }
+  | { k: 'jelly'; u: number; x: number; v: number; p: number; c: number }
+  | { k: 'glow'; u: number; x: number; v: number; n: number; p: number; c: number }
+  | { k: 'tendril'; u: number; x: number; v: number; len: number; p: number; c: number }
+  | { k: 'angler'; u: number; x: number; v: number; p: number };
 
 const FONT = '"VT323", ui-monospace, monospace';
-const CELL = 44;
+const AMBER = '#ffa828', AMBER_HI = '#ffd277', DIM = '#a8742a';
 /** '#rrggbb' plus an alpha from 0 to 1. */
 const hexA = (hex: string, a: number) => hex + Math.round(clamp(a, 0, 1) * 255).toString(16).padStart(2, '0');
+/** A repeatable 0..1 value for a grid cell. */
+const hash = (a: number, b: number) => {
+  let x = Math.imul(a ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(b + 0x7f4a7c15, 0xc2b2ae35);
+  x ^= x >>> 15; x = Math.imul(x, 0x2c1b3c6d); x ^= x >>> 13;
+  return (x >>> 0) / 4294967296;
+};
+const BOAT = ['  |\\', ' _|_\\_', ' \\___/'];
+const JELLY = [[' ,-. ', '(   )', ' )|( '], [' ,-. ', '(   )', ' (|) ']];
+const ANGLER_R = ['   *', '  /', ',--._', '  o  )><', '`--\''], ANGLER_L = ['    *', '     \\', '   _.--,', '><(  o', '    `--\''];
+const WAVE = '~^~~-~~^~~_~~-~^~~~_~';
 
 export function createScene(cv: HTMLCanvasElement, opts: { reduced: boolean; onDepth: (u: number) => void }) {
   const ctx = cv.getContext('2d', { alpha: false })!;
   const { reduced } = opts;
   let W = 0, H = 0, dpr = 1, rulerX = 56, lineX = 96, narrow = false, last = 0, time = 0, raf = 0, dirty = true, drawnTier = -1;
-  // The void: near-black navy at the surface down to almost black at the trench floor.
-  const STOPS = [[13, 30, 56], [10, 23, 41], [9, 19, 36], [7, 15, 30], [5, 11, 22], [4, 8, 17], [3, 7, 15], [2, 5, 11]];
+  let FS = 20, CW = 8, CH = 18, cols = 100;
+  // The void: warm black at the surface down to almost nothing at the trench floor.
+  const STOPS = [[22, 14, 6], [16, 10, 5], [13, 8, 4], [10, 7, 4], [8, 5, 3], [6, 4, 2], [4, 3, 2], [2, 2, 1]];
   const voidAt = (u: number) => {
     const t = clamp(u, 0, 7), i = Math.min(6, Math.floor(t)), f = t - i, a = STOPS[i], b = STOPS[i + 1];
     return `rgb(${lerp(a[0], b[0], f) | 0},${lerp(a[1], b[1], f) | 0},${lerp(a[2], b[2], f) | 0})`;
@@ -35,197 +48,210 @@ export function createScene(cv: HTMLCanvasElement, opts: { reduced: boolean; onD
       if (cache.has(key)) return cache.get(key)!;
       const c = document.createElement('canvas'); c.width = c.height = size;
       const g = c.getContext('2d')!, r = g.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-      r.addColorStop(0, color); r.addColorStop(.25, color + '88'); r.addColorStop(1, color + '00');
+      r.addColorStop(0, color + '66'); r.addColorStop(.3, color + '33'); r.addColorStop(1, color + '00');
       g.fillStyle = r; g.fillRect(0, 0, size, size); cache.set(key, c); return c;
     };
   })();
-  const CYAN = '#4de3ff', PINK = '#ff5d8f', GOLD = '#ffd166', VIOLET = '#9d7bff', ORANGE = '#ff9f43';
-  const snow = Array.from({ length: 90 }, () => ({ x: rnd(), y: rnd(), z: rnd(.35, 1), s: rnd(1, 2.6) | 0 || 1, a: rnd(.12, .37) }));
+  const snow = Array.from({ length: 80 }, () => ({ x: rnd(), y: rnd(), z: rnd(.35, 1), a: rnd(.14, .4) }));
   const life: Life[] = [];
-  for (let i = 0; i < 12; i++) life.push({ k: 'school', u: rnd(.35, 2.9), x: rnd(), v: rnd(.008, .022) * (rnd() > .5 ? 1 : -1), n: 5 + rnd(7) | 0, s: rnd(.8, 1.3), p: rnd(9) });
-  for (let i = 0; i < 14; i++) life.push({ k: 'poly', u: rnd(1.5, 5.2), x: rnd(), v: rnd(-.004, .004), s: rnd(.7, 1.6), p: rnd(9), sides: [3, 4, 6][rnd(3) | 0], c: [VIOLET, CYAN, PINK][rnd(3) | 0] });
-  for (let i = 0; i < 22; i++) life.push({ k: 'node', u: rnd(2.8, 6.8), x: rnd(), v: rnd(-.01, .01), n: 2 + rnd(5) | 0, p: rnd(9), c: [CYAN, GOLD, CYAN][rnd(3) | 0] });
-  for (let i = 0; i < 8; i++) life.push({ k: 'chain', u: rnd(4, 6.9), x: rnd(), v: rnd(-.003, .003), len: 10 + rnd(14) | 0, p: rnd(9), c: [PINK, ORANGE, VIOLET][rnd(3) | 0] });
+  for (let i = 0; i < 12; i++) life.push({ k: 'school', u: rnd(.3, 2.9), x: rnd(), v: rnd(.008, .022) * (rnd() > .5 ? 1 : -1), n: 3 + rnd(5) | 0, p: rnd(9), big: rnd() > .7 });
+  for (let i = 0; i < 12; i++) life.push({ k: 'jelly', u: rnd(1.4, 5.2), x: rnd(), v: rnd(-.004, .004), p: rnd(9), c: [4, 2, 5][rnd(3) | 0] });
+  for (let i = 0; i < 20; i++) life.push({ k: 'glow', u: rnd(2.8, 6.8), x: rnd(), v: rnd(-.01, .01), n: 2 + rnd(5) | 0, p: rnd(9), c: [2, 6, 2][rnd(3) | 0] });
+  for (let i = 0; i < 8; i++) life.push({ k: 'tendril', u: rnd(4, 6.8), x: rnd(), v: rnd(-.003, .003), len: 6 + rnd(9) | 0, p: rnd(9), c: [5, 3, 4][rnd(3) | 0] });
+  for (let i = 0; i < 3; i++) life.push({ k: 'angler', u: rnd(5, 6.7), x: rnd(), v: rnd(.004, .009) * (i % 2 ? 1 : -1), p: rnd(9) });
   const rocks = Array.from({ length: 80 }, () => rnd());
-  const beacons = Array.from({ length: 6 }, () => ({ x: rnd(.15, .95), p: rnd(9), h: rnd(.3, .7) }));
+  const beacons = Array.from({ length: 6 }, () => ({ x: rnd(.15, .95), p: rnd(9), h: 2 + rnd(5) | 0 }));
 
   const st = { lead: 0, target: 0, cam: 0, k: 5, ring: [] as { t: number }[], best: null as number | null };
   const scale = () => H / 1.12;
   const CAM_MIN = .292;
   const yOf = (u: number) => H * .44 + (u - Math.max(st.cam, CAM_MIN)) * scale();
-  const tierColor = () => TIERS[api.tierNow ?? 0].color || CYAN;
+  const tierColor = () => TIERS[api.tierNow ?? 0].color || AMBER;
+  const col = (i: number) => TIERS[i].color || AMBER;
 
+  /* Rows of water, cached by world row. Sparse near the surface and sparser below. */
+  let rowCache = new Map<number, string>();
+  const rowU = () => CH / scale();
+  function waterRow(k: number) {
+    let s = rowCache.get(k);
+    if (s !== undefined) return s;
+    const u = k * rowU(), set = u < 1 ? ".'`~-." : u < 3 ? '.:,.' : u < 5 ? '.,.' : '. ', dens = lerp(.05, .014, clamp(u / 6, 0, 1));
+    s = '';
+    for (let c = 0; c < cols; c++) s += hash(k, c) < dens ? set[Math.floor(hash(c, k + 7919) * set.length)] : ' ';
+    if (rowCache.size > 900) rowCache = new Map();
+    rowCache.set(k, s);
+    return s;
+  }
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 1.6);
     W = innerWidth; H = innerHeight; narrow = W <= 860;
     cv.width = W * dpr; cv.height = H * dpr;
-    rulerX = narrow ? 0 : 76; lineX = narrow ? 13 : 104;
+    rulerX = narrow ? 0 : 76; lineX = narrow ? 7 : 104;
+    FS = narrow ? 16 : 20; CH = Math.round(FS * .9);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.font = `${FS}px ${FONT}`;
+    CW = ctx.measureText('MMMMMMMMMM').width / 10 || FS * .4;
+    cols = Math.ceil(W / CW) + 1;
+    rowCache = new Map();
     dirty = true;
   }
-  /** A thin neon stroke: a wide faint pass under a 1px bright one. */
-  function neon(color: string, a: number, draw: () => void, width = 1) {
-    ctx.strokeStyle = hexA(color, a * .22); ctx.lineWidth = width + 4; ctx.beginPath(); draw(); ctx.stroke();
-    ctx.strokeStyle = hexA(color, a); ctx.lineWidth = width; ctx.beginPath(); draw(); ctx.stroke();
-  }
-  function drawGrid(c: string) {
-    const top = Math.max(0, yOf(-.1)), floor = Math.min(H, yOf(7.22));
+  const text = (s: string, x: number, y: number) => ctx.fillText(s, Math.round(x), Math.round(y));
+  /** Lines of ASCII with their top-left at x, y. */
+  function art(lines: string[], x: number, y: number) { for (let i = 0; i < lines.length; i++) text(lines[i], x, y + i * CH); }
+
+  function drawWater(c: string) {
+    const top = Math.max(-CH, yOf(-.1) + CH), floor = Math.min(H, yOf(7.22)), ru = rowU();
     if (floor <= top) return;
-    const x0 = (W / 2) % CELL, cellU = CELL / scale(), k0 = Math.ceil(-.1 / cellU), k1 = Math.floor(7.22 / cellU);
-    const draw = (major: boolean) => {
-      ctx.beginPath();
-      for (let i = 0, x = x0; x < W; i++, x += CELL) if ((i % 4 === 0) === major) { ctx.moveTo((x | 0) + .5, top); ctx.lineTo((x | 0) + .5, floor); }
-      for (let k = k0; k <= k1; k++) {
-        if ((k % 4 === 0) !== major) continue;
-        const y = yOf(k * cellU); if (y < top || y > floor) continue;
-        ctx.moveTo(0, (y | 0) + .5); ctx.lineTo(W, (y | 0) + .5);
-      }
-      ctx.stroke();
-    };
-    ctx.lineWidth = 1;
-    ctx.strokeStyle = hexA(c, .045); draw(false);
-    ctx.strokeStyle = hexA(c, .1); draw(true);
-  }
-  /** Perspective grid from a horizon line at y, opening towards `edge` (0 = up, H = down). */
-  function perspective(y: number, edge: number, c: string, a: number, flow: number) {
-    const span = edge - y, dir = Math.sign(span); if (!dir) return;
-    ctx.lineWidth = 1; ctx.strokeStyle = hexA(c, a * .6); ctx.beginPath();
-    for (let i = -14; i <= 14; i++) { ctx.moveTo(W / 2 + i * CELL * .6, y); ctx.lineTo(W / 2 + i * CELL * 7, edge); }
-    const n = 9;
-    for (let j = 0; j < n; j++) {
-      const f = ((j + flow) % n) / n, yy = y + span * f * f;
-      ctx.moveTo(0, (yy | 0) + .5); ctx.lineTo(W, (yy | 0) + .5);
-    }
-    ctx.stroke();
-    neon(c, a + .3, () => { ctx.moveTo(0, (y | 0) + .5); ctx.lineTo(W, (y | 0) + .5); }, 2);
+    const cam = Math.max(st.cam, CAM_MIN), k0 = Math.ceil((cam + (top - H * .44) / scale()) / ru), k1 = Math.floor((cam + (floor - H * .44) / scale()) / ru);
+    ctx.fillStyle = hexA(c, .2);
+    for (let k = k0; k <= k1; k++) text(waterRow(k), 0, yOf(k * ru));
   }
   function drawSurface() {
     const sy = yOf(-.1);
-    if (sy < 0) return;
-    const g = ctx.createLinearGradient(0, 0, 0, sy);
-    g.addColorStop(0, '#081226'); g.addColorStop(1, '#13284a');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, sy);
-    perspective(sy, 0, CYAN, .35, time * .25);
+    if (sy < -CH) return;
+    ctx.fillStyle = '#0d0905'; ctx.fillRect(0, 0, W, sy);
+    // stars, anchored to the surface
+    ctx.fillStyle = hexA(AMBER_HI, .34);
+    for (let j = 2; sy - j * CH > -CH; j++) {
+      let s = '';
+      for (let c = 0; c < cols; c++) { const r = hash(-j, c); s += r < .006 ? '*' : r < .014 ? '+' : r < .03 ? '.' : ' '; }
+      text(s, 0, sy - j * CH);
+    }
+    // the wave line rolls sideways
+    const shift = Math.floor(time * 3) % WAVE.length;
+    let w = ''; while (w.length < cols + WAVE.length) w += WAVE;
+    ctx.fillStyle = hexA(col(2), .75); text(w.slice(shift, shift + cols), 0, sy - CH * .5);
+    if (!narrow) { ctx.fillStyle = AMBER_HI; art(BOAT, lineX - CW * 2.5, sy - CH * 3.4 + Math.round(Math.sin(time * 1.3)) * 1); }
   }
   function drawZoneLines() {
-    ctx.setLineDash([]);
     for (let i = 1; i < 7; i++) {
-      const y = (yOf(i) | 0) + .5; if (y < -10 || y > H + 10) continue;
-      if (st.lead >= i - .001) neon(TIERS[i].color, .7, () => { ctx.moveTo(rulerX, y); ctx.lineTo(W, y); });
-      else { ctx.strokeStyle = '#7d93b85c'; ctx.lineWidth = 2; ctx.setLineDash([6, 6]); ctx.beginPath(); ctx.moveTo(rulerX, y); ctx.lineTo(W, y); ctx.stroke(); ctx.setLineDash([]); }
+      const y = yOf(i) - CH / 2; if (y < -CH || y > H + CH) continue;
+      const on = st.lead >= i - .001, label = `[ ${TIERS[i].zone.toUpperCase()} ${fmt(fathoms(i))} fm ]`, n = Math.max(0, cols - label.length - 4);
+      if (on) { ctx.fillStyle = hexA(col(i), .9); text('===' + label + '='.repeat(n), rulerX + CW, y); }
+      else { ctx.fillStyle = hexA(DIM, .5); text('- -' + label.toLowerCase() + ' -'.repeat(n >> 1), rulerX + CW, y); }
     }
   }
   function school(c: Extract<Life, { k: 'school' }>) {
-    const dir = c.v > 0 ? 1 : -1, w = 7 * c.s, h = 4 * c.s;
-    ctx.strokeStyle = 'rgba(142,238,255,.42)'; ctx.lineWidth = 1.5; ctx.beginPath();
+    const right = c.v > 0, f = c.big ? (right ? '><(((*>' : '<*)))><') : (right ? '><>' : '<><');
+    ctx.fillStyle = hexA(col(2), .62);
     for (let i = 0; i < c.n; i++) {
-      const fx = c.x * W + i * 15 * c.s * ((i % 3) - 1) + Math.sin(time * .9 + i) * 8, fy = yOf(c.u) + (i % 4) * 11 * c.s + Math.sin(time * 1.2 + i * 2) * 4;
-      ctx.moveTo(fx - dir * w, fy - h); ctx.lineTo(fx, fy); ctx.lineTo(fx - dir * w, fy + h);
+      const x = c.x * W + ((i * 37) % 5 - 2) * CW * (c.big ? 7 : 4) + Math.sin(time * .9 + i) * 6, y = yOf(c.u) + ((i * 3) % 4) * CH + Math.sin(time * 1.2 + i * 2) * 3;
+      text(f, x, y);
     }
-    ctx.stroke();
   }
-  function poly(c: Extract<Life, { k: 'poly' }>) {
-    const x = c.x * W + Math.sin(time * .22 + c.p) * 26, y = yOf(c.u) + Math.sin(time * .4 + c.p) * 14, r = 16 * c.s, rot = time * .25 + c.p;
-    const a = .45 + .25 * Math.sin(time * 1.4 + c.p);
-    neon(c.c, a, () => {
-      for (let i = 0; i <= c.sides; i++) { const t = rot + i * Math.PI * 2 / c.sides; i ? ctx.lineTo(x + Math.cos(t) * r, y + Math.sin(t) * r) : ctx.moveTo(x + Math.cos(t) * r, y + Math.sin(t) * r); }
-      ctx.moveTo(x - 2, y); ctx.lineTo(x + 2, y);
-    });
+  function jelly(c: Extract<Life, { k: 'jelly' }>) {
+    const x = c.x * W + Math.sin(time * .22 + c.p) * 22, y = yOf(c.u) + Math.sin(time * .5 + c.p) * 12;
+    ctx.fillStyle = hexA(col(c.c), .5 + .25 * Math.sin(time * 1.4 + c.p));
+    art(JELLY[Math.floor(time * 1.4 + c.p) & 1], x, y);
   }
-  function node(c: Extract<Life, { k: 'node' }>) {
-    ctx.globalCompositeOperation = 'lighter';
-    const sp = sprite(c.c, 32);
+  function glow(c: Extract<Life, { k: 'glow' }>) {
     for (let i = 0; i < c.n; i++) {
-      const a = .35 + .65 * Math.max(0, Math.sin(time * 1.3 + c.p + i * 1.4));
-      const x = c.x * W + i * 16 + Math.sin(time * .5 + i) * 7, y = yOf(c.u) + (i % 2) * 11 + Math.cos(time * .6 + i) * 5;
-      ctx.globalAlpha = a * .7; ctx.drawImage(sp, x - 8, y - 8, 16, 16);
-      ctx.globalAlpha = a; ctx.fillStyle = c.c; ctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+      const a = Math.max(0, Math.sin(time * 1.3 + c.p + i * 1.4));
+      const x = c.x * W + i * CW * 2 + Math.sin(time * .5 + i) * 5, y = yOf(c.u) + (i % 2) * CH + Math.cos(time * .6 + i) * 4;
+      ctx.fillStyle = hexA(col(c.c), .25 + .7 * a); text(a > .8 ? '*' : a > .4 ? '+' : '.', x, y);
     }
-    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
   }
-  function chain(c: Extract<Life, { k: 'chain' }>) {
-    ctx.fillStyle = c.c; const y0 = yOf(c.u);
+  function tendril(c: Extract<Life, { k: 'tendril' }>) {
+    const y0 = yOf(c.u); let prev = 0;
     for (let i = 0; i < c.len; i++) {
-      const x = c.x * W + Math.sin(time * .55 + i * .35 + c.p) * (10 + i * 1.4), y = y0 + i * 10;
-      ctx.globalAlpha = .25 + .55 * Math.max(0, Math.sin(time * 2.1 - i * .45 + c.p)); ctx.fillRect(x - 2, y - 2, 4, 4);
+      const off = Math.round(Math.sin(time * .55 + i * .35 + c.p) * (1 + i * .22));
+      ctx.fillStyle = hexA(col(c.c), .3 + .5 * Math.max(0, Math.sin(time * 2.1 - i * .45 + c.p)));
+      text(off > prev ? '\\' : off < prev ? '/' : i % 2 ? ')' : '(', c.x * W + off * CW, y0 + i * CH);
+      prev = off;
     }
-    ctx.globalAlpha = 1;
+  }
+  function angler(c: Extract<Life, { k: 'angler' }>) {
+    const right = c.v > 0, x = c.x * W, y = yOf(c.u) + Math.sin(time * .4 + c.p) * 8, lines = right ? ANGLER_R : ANGLER_L;
+    ctx.fillStyle = hexA(col(3), .6); art(lines.slice(1), x, y + CH);
+    const lure = .45 + .55 * Math.max(0, Math.sin(time * 2.4 + c.p)), lx = x + (right ? 3 : 4) * CW;
+    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = lure; ctx.drawImage(sprite(col(6), 48), lx - 20, y - 14, 48, 48); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = hexA(col(6), lure); text('*', lx, y);
   }
   function drawTrench() {
     const start = 5.4; if (st.cam < start - 1) return;
-    // stepped walls: x snaps to an 8px grid so the outline reads as hard pixel geometry
-    const wall = (side: number) => {
-      ctx.beginPath(); ctx.moveTo(side < 0 ? 0 : W, Math.max(0, yOf(start)));
-      let px = 0;
-      for (let i = 0; i < 80; i++) {
-        const u = start + i * .03, y = yOf(u); if (y < -60) continue; if (y > H + 60) break;
-        const close = clamp((u - start) / 1.7, 0, 1) ** 1.5, grow = clamp((u - start) / .35, 0, 1);
-        const w = Math.round((.03 + close * .19) * W * (.7 + rocks[(i + (side > 0 ? 40 : 0)) % 80] * .5) * grow / 8) * 8, x = side < 0 ? w : W - w;
-        ctx.lineTo(px || x, y); ctx.lineTo(x, y); px = x;
-      }
-      ctx.lineTo(side < 0 ? 0 : W, H + 60); ctx.closePath();
-      ctx.fillStyle = '#03060d'; ctx.fill();
-      ctx.strokeStyle = hexA(VIOLET, .5); ctx.lineWidth = 1; ctx.stroke();
+    const ru = rowU(), cam = Math.max(st.cam, CAM_MIN), fy = yOf(7.22);
+    const k0 = Math.max(Math.ceil(start / ru), Math.ceil((cam + (-CH - H * .44) / scale()) / ru)), k1 = Math.min(Math.floor(7.22 / ru), Math.floor((cam + (H - H * .44) / scale()) / ru));
+    const width = (k: number, side: number) => {
+      const u = k * ru, close = clamp((u - start) / 1.7, 0, 1) ** 1.5, grow = clamp((u - start) / .35, 0, 1), i = Math.floor((u - start) / .03);
+      return Math.round((.03 + close * .19) * W * (.7 + rocks[((i + (side > 0 ? 40 : 0)) % 80 + 80) % 80] * .5) * grow / CW);
     };
-    wall(1); if (W > 500) wall(-1);
-    const fy = yOf(7.22);
-    if (fy < H + 40) {
-      ctx.fillStyle = '#02050b'; ctx.fillRect(0, fy, W, H - fy + 50);
-      perspective(fy, H + 40, GOLD, .3, -time * .25);
+    const bg = '#030201', wallC = hexA(col(4), .55);
+    for (let k = k0; k <= k1; k++) {
+      const y = yOf(k * ru);
+      for (const side of narrow ? [1] : [-1, 1]) {
+        const w = width(k, side), prev = width(k - 1, side); if (w < 1) continue;
+        const edge = w > prev ? (side < 0 ? '\\' : '/') : w < prev ? (side < 0 ? '/' : '\\') : '|';
+        ctx.fillStyle = bg; ctx.fillRect(side < 0 ? 0 : W - w * CW, Math.round(y), w * CW, CH + 1);
+        ctx.fillStyle = wallC;
+        if (side < 0) text('#'.repeat(w - 1) + edge, 0, y); else text(edge + '#'.repeat(w - 1), W - w * CW, y);
+      }
+    }
+    if (fy < H + CH) {
+      ctx.fillStyle = bg; ctx.fillRect(0, fy, W, H - fy + 50);
+      let ridge = '', bed = '';
+      for (let c = 0; c < cols; c++) { const r = hash(77, c); ridge += r < .08 ? '^' : r < .14 ? '/' : r < .2 ? '\\' : '_'; bed += hash(78, c) < .3 ? '.' : '#'; }
+      ctx.fillStyle = hexA(col(6), .8); text(ridge, 0, fy - CH * .6);
+      ctx.fillStyle = hexA(col(6), .22); for (let j = 0; j < 6 && fy + j * CH < H; j++) text(bed, 0, fy + j * CH + CH * .3);
       for (const b of beacons) {
-        const x = (b.x * W | 0) + .5, top = fy - H * b.h * .4, a = .35 + .2 * Math.sin(time * 2 + b.p);
-        const g = ctx.createLinearGradient(0, top, 0, fy); g.addColorStop(0, hexA(PINK, 0)); g.addColorStop(1, hexA(PINK, a));
-        ctx.strokeStyle = g; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, fy); ctx.stroke();
-        ctx.fillStyle = PINK; ctx.fillRect(x - 2.5, fy - 2.5, 5, 5);
+        const x = Math.round(b.x * W / CW) * CW, a = .4 + .5 * Math.max(0, Math.sin(time * 2 + b.p));
+        ctx.fillStyle = hexA(col(5), .45); for (let j = 1; j <= b.h; j++) text('|', x, fy - CH * .6 - j * CH);
+        ctx.fillStyle = hexA(col(5), a); text('*', x, fy - CH * .6 - (b.h + 1) * CH);
       }
     }
   }
   function drawLine(c: string) {
-    const y = yOf(st.lead), top = Math.max(0, yOf(-.1)), x = lineX + .5;
-    neon(CYAN, .75, () => { ctx.moveTo(x, top); ctx.lineTo(x, y - 12); });
-    ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .6; ctx.drawImage(sprite(c, 96), lineX - 44, y - 44, 88, 88); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
-    // the sounding lead: a hard-edged diamond in the tier colour
-    const diamond = (r: number) => { ctx.moveTo(lineX, y - r); ctx.lineTo(lineX + r, y); ctx.lineTo(lineX, y + r); ctx.lineTo(lineX - r, y); ctx.closePath(); };
-    ctx.fillStyle = '#050a14'; ctx.beginPath(); diamond(11); ctx.fill();
-    neon(c, 1, () => diamond(11), 2);
-    ctx.fillStyle = c; ctx.beginPath(); diamond(4); ctx.fill();
+    const y = yOf(st.lead), top = Math.max(-CH, yOf(-.1) - CH * .5), x = lineX - CW / 2;
+    // the sounding line: a column of pipes from the surface down to the lead
+    ctx.fillStyle = hexA(AMBER, .8);
+    for (let yy = y - CH * 2; yy > top; yy -= CH) text('|', x, yy);
+    ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(sprite(c, 96), lineX - 48, y - 48, 96, 96); ctx.globalCompositeOperation = 'source-over';
+    // the lead itself, in the tier colour
+    ctx.fillStyle = c;
+    text('|', x, y - CH * 1.5); text('[#]', x - CW, y - CH * .5); text('V', x, y + CH * .5);
     for (let i = st.ring.length - 1; i >= 0; i--) {
       const r = st.ring[i]; r.t += .016; const p = r.t / 1.1;
       if (p >= 1) { st.ring.splice(i, 1); continue; }
-      ctx.globalAlpha = (1 - p) * .8; neon(c, 1, () => diamond(14 + p * 300), 1.5); ctx.globalAlpha = 1;
+      // a sonar ping: a circle drawn with - | / \ on the character grid
+      const rad = 16 + p * 300, n = Math.max(12, Math.floor(rad * 6.28 / (CW * 2.4)));
+      ctx.fillStyle = hexA(c, (1 - p) * .85);
+      for (let j = 0; j < n; j++) {
+        const a = j / n * 6.283, cs = Math.cos(a), sn = Math.sin(a);
+        const px = Math.round((lineX + cs * rad) / CW) * CW - CW / 2, py = y + Math.round(sn * rad / CH) * CH - CH * .5;
+        if (px < -CW || px > W || py < -CH || py > H) continue;
+        text(Math.abs(sn) > .92 ? '-' : Math.abs(cs) > .92 ? '|' : cs * sn > 0 ? '\\' : '/', px, py);
+      }
     }
   }
   function drawRuler() {
-    const x = rulerX + .5, span = 1.12 * .62;
-    ctx.font = narrow ? `13px ${FONT}` : `16px ${FONT}`;
-    ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
+    const span = 1.12 * .62;
     if (!narrow) {
-      ctx.strokeStyle = 'rgba(125,147,184,.55)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+      // the gutter: a rule of pipes with fathom marks, like line numbers
+      ctx.fillStyle = hexA(DIM, .7);
+      for (let y = 0; y < H; y += CH) text('|', rulerX - CW / 2, y);
       const c0 = Math.max(st.cam, CAM_MIN), lo = Math.floor((c0 - span) * 10) / 10, hi = c0 + span;
-      ctx.lineWidth = 1;
+      ctx.textAlign = 'right';
       for (let u = Math.max(0, lo); u <= Math.min(7, hi); u = Math.round((u + .1) * 10) / 10) {
-        const y = (yOf(u) | 0) + .5, whole = Math.abs(u - Math.round(u)) < .01, half = Math.abs(u * 2 - Math.round(u * 2)) < .01;
-        ctx.strokeStyle = 'rgba(125,147,184,.7)'; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - (whole ? 16 : half ? 10 : 5), y); ctx.stroke();
-        if (half) { ctx.fillStyle = whole ? '#e8f1ff' : '#7d93b8'; ctx.fillText(fmt(fathoms(u)), x - (whole ? 20 : 14), y + 1); }
+        const y = yOf(u) - CH / 2, whole = Math.abs(u - Math.round(u)) < .01, half = Math.abs(u * 2 - Math.round(u * 2)) < .01;
+        ctx.fillStyle = whole ? AMBER_HI : hexA(DIM, .9);
+        text(half ? `${fmt(fathoms(u))} ${whole ? '=' : '-'}` : '-', rulerX - CW * .7, y);
       }
+      // zone names run down the gutter one letter to a row
+      ctx.textAlign = 'center';
       for (let i = 0; i < 7; i++) {
-        const y = yOf(i + .5);
-        if (y < 60 || y > H - 60) continue;
-        ctx.save(); ctx.translate(16, y); ctx.rotate(-Math.PI / 2); ctx.textAlign = 'center'; ctx.font = `17px ${FONT}`;
-        ctx.fillStyle = TIERS[i].color; ctx.fillText(spaced(TIERS[i].zone.toUpperCase()), 0, 0); ctx.restore();
+        const name = TIERS[i].zone.toUpperCase(), y0 = yOf(i + .5) - name.length * CH / 2;
+        if (y0 > H || y0 + name.length * CH < 0) continue;
+        ctx.fillStyle = hexA(col(i), .8);
+        for (let j = 0; j < name.length; j++) text(name[j], 10, y0 + j * CH);
       }
+      ctx.textAlign = 'left';
     }
-    const mark = (r: number | null, color: string, label: string) => {
-      if (r == null) return;
-      const y = yOf(r); if (y < 0 || y > H) return;
-      ctx.fillStyle = color; ctx.beginPath(); ctx.moveTo(lineX - 14, y); ctx.lineTo(lineX - 22, y - 5); ctx.lineTo(lineX - 22, y + 5); ctx.fill();
-      if (!narrow) { ctx.font = `14px ${FONT}`; ctx.textAlign = 'left'; ctx.fillText(spaced(label), lineX + 14, y - 12); }
-    };
-    if (st.best != null && Math.abs(st.best - st.lead) > .07) mark(st.best, PINK, 'BEST');
+    if (st.best != null && Math.abs(st.best - st.lead) > .07) {
+      const y = yOf(st.best) - CH / 2; if (y < 0 || y > H) return;
+      ctx.fillStyle = col(5); text(narrow ? '<' : '<-- best', lineX + CW, y);
+    }
   }
-  const spaced = (s: string) => s.split('').join(' ');
   function drawVignette() {
     const g = ctx.createRadialGradient(W / 2, H * .45, Math.min(W, H) * .35, W / 2, H * .45, Math.max(W, H) * .8);
-    g.addColorStop(0, 'rgba(2,4,10,0)'); g.addColorStop(1, `rgba(2,4,10,${Math.min(.72, .25 + st.cam / 12)})`);
+    g.addColorStop(0, 'rgba(3,2,1,0)'); g.addColorStop(1, `rgba(3,2,1,${Math.min(.72, .25 + st.cam / 12)})`);
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   }
   function frame(now: number) {
@@ -247,24 +273,25 @@ export function createScene(cv: HTMLCanvasElement, opts: { reduced: boolean; onD
     const g = ctx.createLinearGradient(0, 0, 0, H);
     g.addColorStop(0, voidAt(st.cam - .5)); g.addColorStop(.5, voidAt(st.cam)); g.addColorStop(1, voidAt(st.cam + .55));
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    drawGrid(c);
+    ctx.font = `${FS}px ${FONT}`; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+    drawWater(c);
     drawZoneLines();
     for (const l of life) {
       if (!reduced) { l.x += l.v * dt; if (l.x > 1.1) l.x = -.1; if (l.x < -.1) l.x = 1.1; }
       const y = yOf(l.u); if (y < -240 || y > H + 240) continue;
-      if (l.k === 'school') school(l); else if (l.k === 'poly') poly(l); else if (l.k === 'node') node(l); else chain(l);
+      if (l.k === 'school') school(l); else if (l.k === 'jelly') jelly(l); else if (l.k === 'glow') glow(l); else if (l.k === 'tendril') tendril(l); else angler(l);
     }
     drawTrench();
-    ctx.fillStyle = 'rgb(200,220,255)';
+    // marine snow: specks that streak into bars when the lead drops fast
+    const fast = Math.abs(vel);
     for (const p of snow) {
       if (!reduced) {
         p.y -= (vel / H) * p.z + dt * .012 * p.z; p.y = ((p.y % 1) + 1) % 1;
-        p.x += Math.sin(time * .4 + p.s * 6) * dt * .006;
+        p.x += Math.sin(time * .4 + p.z * 9) * dt * .006;
       }
-      const sx = (((p.x % 1) + 1) % 1 * W) | 0, sy = (p.y * H) | 0, stretch = clamp(Math.abs(vel) * p.z * .9, 0, 40);
-      ctx.globalAlpha = p.a; ctx.fillRect(sx, sy, p.s, p.s + stretch);
+      ctx.fillStyle = hexA(AMBER_HI, p.a);
+      text(fast * p.z > 9 ? '|' : fast * p.z > 3 ? ':' : '.', ((p.x % 1) + 1) % 1 * W, p.y * H);
     }
-    ctx.globalAlpha = 1;
     drawSurface();
     drawVignette();
     drawRuler();

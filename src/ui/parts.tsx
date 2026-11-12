@@ -1,10 +1,11 @@
 /* Small pieces shared by the haul list, the drawer and the check panel. */
-import type { CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { TIERS, badgeColor, fmt, type Badge } from '../game/score';
 import { GLYPHS, glyphId } from '../game/glyphs';
 import { useGame, type HaulRow, type NowView } from '../game/controller';
 import { reelsAt, sizeAt } from '../descent/score';
 import { TABLE } from '../descent/levels';
+import { banner } from './ascii';
 
 export const cssVars = (v: Record<string, string>) => v as CSSProperties;
 
@@ -24,12 +25,49 @@ export function Icon({ b }: { b: Badge }) {
   return <svg className="ic" viewBox="0 0 8 8" shapeRendering="crispEdges" aria-hidden="true"><path d={glyphPath(glyphId(b.name, b.family) ?? 'spark')} fill="currentColor" /></svg>;
 }
 
+/* An ASCII frame laid over a panel: +--[ title ]------[ right ]--+ with | down the sides. The panel
+   needs position: relative and about a line of padding. Titles are real content; the rules are not. */
+export function Box({ title, right, foot }: { title?: ReactNode; right?: ReactNode; foot?: ReactNode }) {
+  const lab = (n: ReactNode) => n != null && n !== '' && <span className="bx-l">[ {n} ]</span>;
+  return (
+    <div className="bx">
+      <div className="bx-t"><span aria-hidden="true">+--</span>{lab(title)}<i aria-hidden="true" />{lab(right)}<span aria-hidden="true">--+</span></div>
+      <div className="bx-s l" aria-hidden="true" /><div className="bx-s r" aria-hidden="true" />
+      <div className="bx-b"><span aria-hidden="true">+--</span><i aria-hidden="true" />{lab(foot)}<span aria-hidden="true">--+</span></div>
+    </div>
+  );
+}
+
+/* The name in block letters, each row a tier deeper than the one above. */
+const LOGO = banner('MILLION FATHOMS');
+export function Logo() {
+  return <pre className="logo" aria-hidden="true">{LOGO.map((l, i) => <span key={i} style={cssVars({ '--c': `var(--t${i + 2})` })}>{l}</span>)}</pre>;
+}
+export function BigText({ text }: { text: string }) {
+  return <pre className="bigtext" aria-hidden="true">{banner(text).join('\n')}</pre>;
+}
+
+export function Clock() {
+  const [, tick] = useState(0);
+  useEffect(() => { const t = setInterval(() => tick(v => v + 1), 1000); return () => clearInterval(t); }, []);
+  return <span className="clock" aria-hidden="true">{new Date().toTimeString().slice(0, 8)}</span>;
+}
+
+/* The last rolls as one line of characters, oldest first: the deeper the tier, the heavier the mark. */
+const MARK = '.:-=+#@';
+export function Hist() {
+  const { S } = useGame();
+  const last = S.log.slice(0, 26).reverse();
+  if (!last.length) return null;
+  return <span className="hist" id="hist" aria-label="Tiers of your latest rolls"><span className="k">hist </span>{last.map((l, i) => <i key={i} style={cssVars({ '--c': TIERS[l.k].color })}>{MARK[l.k]}</i>)}</span>;
+}
+
 export function Row({ row }: { row: HaulRow }) {
   const { b, isNew, animate } = row;
   return (
     <li className={`row ${b.ep >= 10000 ? 'big' : ''} ${animate ? 'in' : ''}`} style={cssVars({ '--c': badgeColor(b.ep) })}>
       <Icon b={b} />
-      <span className="nm">{b.name}{isNew && <span className="new">New</span>}<span className="ds">{b.desc}</span></span>
+      <span className="nm"><span className="ld"><span>{b.name}</span>{isNew && <span className="new">New</span>}<i aria-hidden="true" /></span><span className="ds">{b.desc}</span></span>
       <span className="pts">+{fmt(b.ep)}</span>
     </li>
   );
